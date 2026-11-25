@@ -93,6 +93,7 @@ main { padding-block: 22px 64px; display: grid; gap: 22px; }
 .tian .guide { stroke: var(--grid); stroke-width: 4; stroke-dasharray: 14 14; fill: none; }
 svg .ink { fill: var(--ink); } svg .faint { fill: var(--line); }
 svg .c0 { fill: var(--c0); } svg .c1 { fill: var(--c1); } svg .c2 { fill: var(--c2); } svg .c3 { fill: var(--c3); } svg .c4 { fill: var(--c4); } svg .c5 { fill: var(--c5); }
+svg .pen.pc0 { stroke: var(--c0); } svg .pen.pc1 { stroke: var(--c1); } svg .pen.pc2 { stroke: var(--c2); } svg .pen.pc3 { stroke: var(--c3); } svg .pen.pc4 { stroke: var(--c4); } svg .pen.pc5 { stroke: var(--c5); } svg .pen.pink { stroke: var(--ink); }
 svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: round; stroke-linejoin: round; }
 .tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .btn { border: 1px solid var(--line); background: var(--card); border-radius: 9px; padding: 6px 12px; font-weight: 500; font-size: 0.9rem; }
@@ -236,9 +237,10 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
     clearTimeout(animTimer);
     if (!rec.m) return;
     var defs = rec.p.map(function (d, i) { return '<clipPath id="cp' + i + '"><path d="' + d + '"></path></clipPath>'; }).join("");
+    var col = topColors(rec);
     var pens = rec.m.map(function (m, i) {
       var d = m.map(function (pt, k) { return (k ? "L" : "M") + pt[0] + " " + pt[1]; }).join("");
-      return '<path class="pen" clip-path="url(#cp' + i + ')" d="' + d + '" data-k="' + i + '"></path>';
+      return '<path class="pen p' + col(i) + '" clip-path="url(#cp' + i + ')" d="' + d + '" data-k="' + i + '"></path>';
     }).join("");
     box.innerHTML = '<svg viewBox="0 0 1024 1024" role="img" aria-label="stroke order">' + GUIDES + FLIP + "<defs>" + defs + "</defs>" +
       rec.p.map(function (d) { return '<path class="faint" d="' + d + '"></path>'; }).join("") + pens + "</g></svg>";
@@ -297,12 +299,39 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
   function nodeName(n) { return n.name || n.form || ""; }
   function nodeHtml(rec, n, color) {
     var nm = nodeName(n), mint = !nm || isMint(nm), i = hIdx[nm], ci = cIdx[n.form || nm];
-    var gl = i != null ? H.gl[i] : ci != null ? C[ci].label : mint ? (n.kids ? "unnamed group" : "") : "";
-    var href = i != null ? hLink(nm) : ci != null ? "#c-" + ci : null;
+    var gi = n.kids && i == null ? gIdx[gKey(n)] : null;
+    var gl = i != null ? H.gl[i] : ci != null ? C[ci].label : gi != null ? (CORE.gn[gi] || (n.name ? "rare character" : "group without a character")) : mint ? (n.kids ? "group" : "") : "";
+    var href = i != null ? hLink(nm) : ci != null ? "#c-" + ci : gi != null ? "#g-" + gi : null;
     var head = (color ? '<span class="mark" style="background:var(--' + color + ')"></span>' : "") + mini(rec, n.strokes) +
       '<span><span class="nm">' + (safe(nm) ? esc(nm) : "") + (i != null ? ' <span class="py">' + esc(H.py[i]) + "</span>" : "") + '</span><div class="gl">' + esc(gl) + "</div></span>";
     var kids = n.kids ? '<div class="kids">' + n.kids.map(function (k) { return nodeHtml(rec, k, null); }).join("") + "</div>" : "";
     return '<div class="node' + (n.kids ? "" : " leaf") + '">' + (href ? '<a href="' + href + '">' + head + "</a>" : '<div class="nh">' + head + "</div>") + kids + "</div>";
+  }
+  var gIdx = {};
+  function gLeafs(n) { return n.kids ? [].concat.apply([], n.kids.map(gLeafs)) : [n.form]; }
+  function gKey(n) { return n.name || "·" + gLeafs(n).join("+"); }
+  function partLink(x) {
+    var txt = x.charAt(0) === "·" ? x.slice(1).split("+").map(formText).join(" + ") : formText(x);
+    var href = hIdx[x] != null ? hLink(x) : cIdx[x] != null ? "#c-" + cIdx[x] : gIdx[x] != null ? "#g-" + gIdx[x] : null;
+    var lab = hIdx[x] != null ? (H.nm && H.nm[hIdx[x]]) || H.gl[hIdx[x]] : cIdx[x] != null ? C[cIdx[x]].label : gIdx[x] != null ? CORE.gn[gIdx[x]] : "";
+    return (href ? '<a class="hz" href="' + href + '">' : '<span class="hz">') + '<span class="han">' + txt + "</span>" + (lab ? '<span class="small muted">' + esc(lab) + "</span>" : "") + (href ? "</a>" : "</span>");
+  }
+  function groupPage(gi) {
+    view.innerHTML = '<p class="load">Opening…</p>';
+    get("data/groups.json").then(function (G) {
+      var g = G[gi];
+      if (!g) { partsPage(); return; }
+      var hosts = Array.from(g.hosts), title = g.name && safe(g.name) ? esc(g.name) : g.k.charAt(0) === "·" ? g.k.slice(1).split("+").map(formText).join(" + ") : "";
+      return hChunk(hIdx[g.ex]).then(function (ch) {
+        var ex = ch[g.ex];
+        view.innerHTML = '<div class="cols"><div class="stick stack"><div class="tian" id="tian"></div><p class="small muted" style="text-align:center;margin:0">Shown inside <a class="han" href="' + hLink(g.ex) + '" style="color:var(--seal)">' + esc(g.ex) + "</a></p></div>" +
+          '<div class="stack"><div class="head"><div class="eyebrow">' + (g.name ? "Rare character used as a component" : "Group without a character of its own") + " · in " + hosts.length + " character" + (hosts.length > 1 ? "s" : "") + '</div><div class="readings"><h1 class="han">' + title + "</h1></div>" +
+          (g.pet ? '<p class="petname" style="margin:0">' + esc(g.pet) + "</p>" : "") +
+          (g.says ? '<p class="origin" style="margin:0">' + esc(g.says) + "</p>" + (g.of ? '<p class="small muted" style="margin:0">From the note on ' + esc(g.of) + ".</p>" : "") : '<p class="muted" style="margin:0">' + (hosts.length > 1 ? "These parts sit together in several characters, so they are kept as one group." : "Kept as one group because it is what remains of one part of the original character.") + "</p>") +
+          '</div><section class="card"><h2>Made of</h2><div class="chips">' + g.parts.map(partLink).join("") + '</div></section><section class="card"><h2>Characters built with it</h2><div class="chips">' + hosts.map(function (h) { return hzCell(h); }).join("") + "</div></section></div></div>";
+        if (ex && ex.p) { var on = {}; g.exs.forEach(function (s) { on[s] = 1; }); $("tian").innerHTML = glyphSvg(ex, function (i) { return on[i] ? "c0" : "faint"; }, GUIDES); }
+      });
+    }).catch(fail);
   }
   function hanziPage(g) {
     var i = hIdx[g];
@@ -507,6 +536,7 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
     if ((m = /^h-([0-9a-f]+)$/.exec(h))) { hanziPage(fromHex(m[1])); v = ""; }
     else if ((m = /^w-(\d+)$/.exec(h))) { wordPage(+m[1]); v = ""; }
     else if ((m = /^c-(\d+)$/.exec(h))) { compPage(+m[1]); v = "parts"; }
+    else if ((m = /^g-(\d+)$/.exec(h))) { groupPage(+m[1]); v = "parts"; }
     else if (h === "map") { mapPage(); v = "map"; }
     else if (h === "road" && !PUB) { roadPage(); v = "road"; }
     else if (h === "parts") { partsPage(); v = "parts"; }
@@ -517,7 +547,7 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
   window.addEventListener("hashchange", function () { route(); });
   Promise.all([get("data/core.json"), get("data/words.json"), get("data/shapes.json").catch(function () { return {}; })]).then(function (r) {
     CORE = r[0]; W = r[1]; SH = r[2] || {}; H = CORE.hanzi; C = CORE.comps || []; PUB = !!CORE.public;
-    HG = Array.from(H.g); HG.forEach(function (g, i) { hIdx[g] = i; });
+    HG = Array.from(H.g); HG.forEach(function (g, i) { hIdx[g] = i; }); (CORE.gk || []).forEach(function (k, i) { gIdx[k] = i; });
     C.forEach(function (c, i) { cIdx[c.f] = i; });
     if (PUB) { loadMarks(); var rl = document.querySelector('#nav a[data-v="road"]'); if (rl) rl.hidden = true; document.querySelector('#nav a[data-v="home"]').textContent = "Home"; }
     route();
