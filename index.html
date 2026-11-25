@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Hanzi Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one sticky search bar; below it a single reading column that widens into two on hanzi pages
+   (the character on its practice grid at the left, everything known about it at the right). */
+:root {
+  --ground: #edf1ee;      /* celadon glaze */
+  --card: #fbfcfb;
+  --ink: #17231f;
+  --ink-2: #4c5c56;
+  --ink-3: #7d8c86;
+  --line: #d3dcd7;
+  --grid: #c3cfc9;
+  --seal: #c2352b;        /* cinnabar: links, the active thing */
+  --seal-soft: #f6dedb;
+  --known: #1f8a66;       /* jade */
+  --known-soft: #d3ece2;
+  --learn: #b7791f;
+  --learn-soft: #f4e6c8;
+  --queue: #3d6fb4;
+  --queue-soft: #dbe6f5;
+  --none-soft: #e3e9e6;
+  --c0: #c2352b; --c1: #2f6fb0; --c2: #1f8a66; --c3: #a35fb5; --c4: #b7791f; --c5: #23808f;
+  --display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --han: "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #0f1a17; --card: #16241f; --ink: #e6efea; --ink-2: #a9bab3; --ink-3: #74867f; --line: #2a3b35; --grid: #33473f;
+  --seal: #f0705f; --seal-soft: #43211d; --known: #4fc79b; --known-soft: #173a2e; --learn: #e0ab4f; --learn-soft: #3d3016;
+  --queue: #7ba8e6; --queue-soft: #1b2e48; --none-soft: #1d2c27;
+  --c0: #f0705f; --c1: #7ba8e6; --c2: #4fc79b; --c3: #c995d8; --c4: #e0ab4f; --c5: #5cc0cf; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ground: #0f1a17; --card: #16241f; --ink: #e6efea; --ink-2: #a9bab3; --ink-3: #74867f; --line: #2a3b35; --grid: #33473f;
+  --seal: #f0705f; --seal-soft: #43211d; --known: #4fc79b; --known-soft: #173a2e; --learn: #e0ab4f; --learn-soft: #3d3016;
+  --queue: #7ba8e6; --queue-soft: #1b2e48; --none-soft: #1d2c27;
+  --c0: #f0705f; --c1: #7ba8e6; --c2: #4fc79b; --c3: #c995d8; --c4: #e0ab4f; --c5: #5cc0cf; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 400 16px/1.5 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--ground); }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--seal); outline-offset: 2px; border-radius: 4px; }
+.han { font-family: var(--han); }
+.py { font-family: var(--mono); font-size: 0.86em; color: var(--ink-2); }
+.muted { color: var(--ink-3); }
+.small { font-size: 0.84rem; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h2 { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.01em; }
+.eyebrow { font: 500 0.72rem/1 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: color-mix(in srgb, var(--ground) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.bar-in, main { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-block: 10px; }
+.brand { font: 700 1.15rem/1 var(--display); display: flex; align-items: center; gap: 8px; }
+.brand .stamp { width: 26px; height: 26px; border-radius: 5px; background: var(--seal); color: #fff; display: grid; place-items: center; font: 600 16px/1 var(--han); }
+.search { position: relative; flex: 1 1 240px; min-width: 0; }
+.search input { width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
+.results { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgb(0 0 0 / 0.16); max-height: min(70vh, 520px); overflow: auto; padding: 6px; }
+.results .eyebrow { padding: 8px 8px 4px; }
+.res { display: flex; gap: 10px; align-items: baseline; padding: 7px 8px; border-radius: 8px; }
+.res:hover, .res.on { background: var(--none-soft); }
+.res .zh { font: 500 1.2rem/1.2 var(--han); min-width: 1.6em; }
+.res .en { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); font-size: 0.9rem; }
+nav { display: flex; gap: 2px; flex-wrap: wrap; }
+nav a { padding: 6px 10px; border-radius: 8px; font-weight: 500; font-size: 0.92rem; color: var(--ink-2); }
+nav a.on { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+main { padding-block: 22px 64px; display: grid; gap: 22px; }
+
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.s3 .dot, .dot.s3 { background: var(--known); } .s2 .dot, .dot.s2 { background: var(--learn); } .s1 .dot, .dot.s1 { background: var(--queue); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font: 500 0.74rem/1.5 var(--mono); background: var(--none-soft); color: var(--ink-2); white-space: nowrap; }
+.pill.s3 { background: var(--known-soft); color: var(--known); } .pill.s2 { background: var(--learn-soft); color: var(--learn); } .pill.s1 { background: var(--queue-soft); color: var(--queue); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.cols { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) { .cols { grid-template-columns: 340px minmax(0, 1fr); align-items: start; } .cols > .stick { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); } }
+.stack { display: grid; gap: 22px; min-width: 0; }
+
+/* the practice grid a learner writes in (田字格) */
+.tian { position: relative; aspect-ratio: 1; width: 100%; max-width: 340px; margin: 0 auto; background: var(--card); border: 1.5px solid var(--grid); border-radius: 10px; overflow: hidden; }
+.tian svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tian .guide { stroke: var(--grid); stroke-width: 4; stroke-dasharray: 14 14; fill: none; }
+svg .ink { fill: var(--ink); } svg .faint { fill: var(--line); }
+svg .c0 { fill: var(--c0); } svg .c1 { fill: var(--c1); } svg .c2 { fill: var(--c2); } svg .c3 { fill: var(--c3); } svg .c4 { fill: var(--c4); } svg .c5 { fill: var(--c5); }
+svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: round; stroke-linejoin: round; }
+.tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--card); border-radius: 9px; padding: 6px 12px; font-weight: 500; font-size: 0.9rem; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.on { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+
+.head { display: grid; gap: 6px; }
+.head h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 700; }
+.head .readings { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.head .py { font-size: 1.15rem; color: var(--seal); }
+.facts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.tree { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.node { border: 1px solid var(--line); border-radius: 12px; padding: 8px; display: grid; gap: 8px; background: var(--card); min-width: 0; }
+.node > a, .node > .nh { display: flex; gap: 8px; align-items: center; }
+.node .mini { width: 44px; height: 44px; flex: none; }
+.node .nm { font: 500 1.15rem/1.1 var(--han); }
+.node .gl { font-size: 0.78rem; color: var(--ink-2); max-width: 15ch; line-height: 1.25; }
+.node .kids { display: flex; gap: 8px; flex-wrap: wrap; padding-left: 10px; border-left: 2px solid var(--line); }
+.node.leaf { background: var(--ground); }
+.shape { display: inline-block; width: 1em; height: 1em; vertical-align: -0.12em; }
+.shape svg { width: 100%; height: 100%; display: block; }
+.shape path { fill: currentColor; }
+.about { font-size: 0.9rem; color: var(--ink-2); max-width: 75ch; }
+.about a { color: var(--seal); text-decoration: underline; }
+.mark { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+.origin { font-size: 1.02rem; line-height: 1.55; max-width: 65ch; }
+.petname { font-family: var(--display, inherit); font-size: 1.25rem; font-weight: 600; margin: 0 0 .4rem; color: var(--seal); }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: 0.92rem; }
+.kv dt { color: var(--ink-3); } .kv dd { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hz { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 8px; font: 500 1.35rem/1 var(--han); background: var(--none-soft); border: 1px solid transparent; position: relative; }
+.hz:hover { border-color: var(--ink-3); }
+.hz.s3 { background: var(--known-soft); color: var(--known); } .hz.s2 { background: var(--learn-soft); color: var(--learn); } .hz.s1 { background: var(--queue-soft); color: var(--queue); }
+.hzp { display: grid; justify-items: center; gap: 1px; } .hzp .py { font-size: 0.68rem; }
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: 12px minmax(3.2em, auto) minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 8px 6px; border-bottom: 1px solid var(--line); border-radius: 6px; }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--none-soft); }
+.row .zh { font: 500 1.25rem/1.2 var(--han); white-space: nowrap; }
+.row .mid { min-width: 0; display: grid; }
+.row .en { color: var(--ink-2); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .dot { align-self: center; }
+.more { justify-self: start; }
+
+.word-big { display: flex; gap: 10px; flex-wrap: wrap; }
+.wchar { display: grid; justify-items: center; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); min-width: 5.2rem; }
+.wchar .g { font: 500 3.2rem/1 var(--han); } .wchar .py { color: var(--seal); font-size: 0.95rem; } .wchar .gl { font-size: 0.76rem; color: var(--ink-2); text-align: center; max-width: 12ch; line-height: 1.2; }
+.sent { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.sent:last-child { border-bottom: 0; }
+.sent .zh { font: 400 1.35rem/1.6 var(--han); }
+.sent .zh a { border-bottom: 2px solid transparent; padding-bottom: 1px; }
+.sent .zh a.s0, .sent .zh a.s1 { border-bottom-color: var(--line); border-bottom-style: dotted; }
+.sent .zh a.me { color: var(--seal); }
+.sent .zh a:hover { background: var(--none-soft); }
+.sent .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.say { border: 0; background: var(--none-soft); border-radius: 999px; width: 28px; height: 28px; display: inline-grid; place-items: center; font-size: 0.8rem; }
+.meter { height: 8px; border-radius: 999px; background: var(--none-soft); overflow: hidden; display: flex; }
+.meter i { display: block; height: 100%; } .meter .k { background: var(--known); } .meter .l { background: var(--learn); } .meter .q { background: var(--queue); }
+
+.hero { display: grid; gap: 18px; }
+.hero h1 { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 700; max-width: 20ch; }
+.hero h1 b { color: var(--known); font-weight: 700; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
+.tile .n { font: 700 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.hsk { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; font-variant-numeric: tabular-nums; }
+.two { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.84rem; color: var(--ink-2); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+
+.map { display: grid; grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr)); gap: 3px; }
+.map a { aspect-ratio: 1; display: grid; place-items: center; border-radius: 5px; font: 400 1.05rem/1 var(--han); background: var(--none-soft); color: var(--ink-3); }
+.map a.s3 { background: var(--known); color: #fff; } .map a.s2 { background: var(--learn); color: #fff; } .map a.s1 { background: var(--queue-soft); color: var(--queue); }
+.map a:hover { outline: 2px solid var(--ink); }
+.parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr)); gap: 6px; }
+.part { border: 1px solid var(--line); background: var(--card); border-radius: 9px; padding: 6px 8px; display: grid; gap: 5px; text-align: left; }
+.part.on { border-color: var(--ink); }
+.part b { font: 500 0.78rem/1 var(--mono); }
+.load { color: var(--ink-3); padding: 40px 0; text-align: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="bar"><div class="bar-in">
+  <a class="brand" href="#home"><span class="stamp">字</span>Hanzi Atlas</a>
+  <div class="search">
+    <input id="q" type="search" placeholder="Search a hanzi, pinyin or English: 好, xihuan, water" autocomplete="off" aria-label="Search">
+    <div class="results" id="results" hidden></div>
+  </div>
+  <nav id="nav">
+    <a href="#home" data-v="home">Today</a><a href="#map" data-v="map">Map</a><a href="#road" data-v="road">Road</a><a href="#parts" data-v="parts">Components</a>
+  </nav>
+</div></div>
+<main id="view"><p class="load">Loading the atlas…</p></main>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var view = $("view"), H = null, W = null, C = null, CORE = null, hIdx = {}, cIdx = {}, chunks = {}, TTS = null, showPy = true, SH = {}, PUB = false;
+  var ST = ["not met", "queued", "learning", "known", "suspended"];
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function sc(st) { return st === 4 ? 0 : (st || 0); }
+  function hex(g) { return g.codePointAt(0).toString(16); }
+  function fromHex(x) { try { return String.fromCodePoint(parseInt(x, 16)); } catch (e) { return ""; } }
+  function plain(s) { return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ü/g, "v").toLowerCase().replace(/[^a-z]/g, ""); }
+  function get(url) { return chunks[url] || (chunks[url] = fetch(url).then(function (r) { if (!r.ok) throw new Error(url); return r.json(); })); }
+  function pad(n) { return ("00" + n).slice(-3); }
+  function hChunk(i) { return get("data/h-" + pad(H.ck[i]) + ".json"); }
+  function wChunk(wi) { return get("data/w-" + pad(W.ck[wi]) + ".json"); }
+  function hLink(g) { return "#h-" + hex(g); }
+  function isMint(f) { return /^(gf-|id_)/.test(f); }
+  // a character every CJK font has; anything else (rare components, mints) is drawn from strokes
+  function safe(g) { if (!g || isMint(g)) return false; if (hIdx[g] != null) return true; var c = g.codePointAt(0); return c >= 0x4e00 && c <= 0x9fa5; }
+  function shape(f) {
+    var s = SH[f]; if (!s) return "";
+    var b = s.bb, w = b[2] - b[0], h = b[3] - b[1], side = Math.max(w, h, 260) + 150, x = (b[0] + b[2]) / 2 - side / 2, y = 900 - (b[1] + b[3]) / 2 - side / 2;
+    return '<span class="shape"><svg viewBox="' + [x, y, side, side].map(Math.round).join(" ") + '" aria-hidden="true">' + FLIP + s.p.map(function (d) { return '<path d="' + d + '"></path>'; }).join("") + "</g></svg></span>";
+  }
+  function formText(f) { return safe(f) ? esc(f) : shape(f) || (isMint(f) ? "" : esc(f)); }
+
+  // ---------------------------------------------------------------- drawing
+  var FLIP = '<g transform="scale(1,-1) translate(0,-900)">';
+  function glyphSvg(rec, cls, extra) {
+    if (!rec || !rec.p) return "";
+    return '<svg viewBox="0 0 1024 1024" aria-hidden="true">' + (extra || "") + FLIP + rec.p.map(function (d, i) { return '<path class="' + cls(i) + '" d="' + d + '"></path>'; }).join("") + "</g></svg>";
+  }
+  var GUIDES = '<path class="guide" d="M512 0V1024M0 512H1024M0 0L1024 1024M1024 0L0 1024"></path>';
+  function topColors(rec) {
+    var map = {}, kids = rec.t && rec.t.kids;
+    if (kids) kids.forEach(function (k, j) { k.strokes.forEach(function (s) { map[s] = "c" + (j % 6); }); });
+    return function (i) { return map[i] || "ink"; };
+  }
+  function mini(rec, strokes) {
+    var on = {}; strokes.forEach(function (s) { on[s] = 1; });
+    return '<span class="mini">' + glyphSvg(rec, function (i) { return on[i] ? "ink" : "faint"; }) + "</span>";
+  }
+  var animTimer = null;
+  function animate(box, rec) {
+    clearTimeout(animTimer);
+    if (!rec.m) return;
+    var defs = rec.p.map(function (d, i) { return '<clipPath id="cp' + i + '"><path d="' + d + '"></path></clipPath>'; }).join("");
+    var pens = rec.m.map(function (m, i) {
+      var d = m.map(function (pt, k) { return (k ? "L" : "M") + pt[0] + " " + pt[1]; }).join("");
+      return '<path class="pen" clip-path="url(#cp' + i + ')" d="' + d + '" data-k="' + i + '"></path>';
+    }).join("");
+    box.innerHTML = '<svg viewBox="0 0 1024 1024" role="img" aria-label="stroke order">' + GUIDES + FLIP + "<defs>" + defs + "</defs>" +
+      rec.p.map(function (d) { return '<path class="faint" d="' + d + '"></path>'; }).join("") + pens + "</g></svg>";
+    var els = box.querySelectorAll(".pen"), i = 0;
+    els.forEach(function (p) { var L = p.getTotalLength ? p.getTotalLength() + 150 : 3000; p.style.strokeDasharray = L; p.style.strokeDashoffset = L; p.dataset.len = L; });
+    (function next() {
+      if (i >= els.length) { animTimer = setTimeout(function () { draw(box, rec); }, 900); return; }
+      var p = els[i++], L = +p.dataset.len, ms = Math.max(260, Math.min(900, L * 0.55));
+      p.style.transition = "stroke-dashoffset " + ms + "ms ease-in-out"; p.style.strokeDashoffset = 0;
+      animTimer = setTimeout(next, ms + 140);
+    })();
+  }
+  function draw(box, rec) { clearTimeout(animTimer); box.innerHTML = glyphSvg(rec, topColors(rec), GUIDES) || '<div class="load han" style="font-size:6rem;padding:0;display:grid;place-items:center;height:100%">' + esc(rec.g || "") + "</div>"; }
+
+  // ---------------------------------------------------------------- public site: the visitor's own marks
+  var marks = { h: {}, w: {} };
+  function loadMarks() {
+    try { var m = JSON.parse(localStorage.getItem("atlas-marks") || "{}"); marks.h = m.h || {}; marks.w = m.w || {}; } catch (e) {}
+    Object.keys(marks.h).forEach(function (g) { if (hIdx[g] != null) H.st[hIdx[g]] = 3; });
+    W.zh.forEach(function (z, i) { if (marks.w[z]) W.st[i] = 3; });
+  }
+  function toggleMark(kind, key) {
+    if (marks[kind][key]) delete marks[kind][key]; else marks[kind][key] = 1;
+    try { localStorage.setItem("atlas-marks", JSON.stringify(marks)); } catch (e) {}
+    if (kind === "h") H.st[hIdx[key]] = marks.h[key] ? 3 : 0; else W.zh.forEach(function (z, i) { if (z === key) W.st[i] = marks.w[key] ? 3 : 0; });
+    route(true);
+  }
+  function markBtn(kind, key) { return PUB ? '<button class="btn' + (marks[kind][key] ? " on" : "") + '" data-mark="' + kind + '" data-key="' + esc(key) + '">' + (marks[kind][key] ? "✓ I know this" : "Mark as known") + "</button>" : ""; }
+
+  // ---------------------------------------------------------------- small pieces
+  function pill(st) { st = sc(st); if (PUB && st < 3) return ""; return '<span class="pill s' + st + '"><span class="dot s' + st + '"></span>' + ST[st] + "</span>"; }
+  function hzCell(g, withPy) {
+    var i = hIdx[g], st = i == null ? 0 : sc(H.st[i]), t = i == null ? "" : H.py[i] + " · " + H.gl[i];
+    var a = '<a class="hz s' + st + '" href="' + hLink(g) + '" title="' + esc(t) + '">' + esc(g) + "</a>";
+    return withPy ? '<span class="hzp">' + a + '<span class="py">' + esc(i == null ? "" : H.py[i]) + "</span></span>" : a;
+  }
+  function wRow(wi) {
+    var st = sc(W.st[wi]);
+    return '<a class="row s' + st + '" href="#w-' + wi + '"><span class="dot"></span><span class="zh">' + esc(W.zh[wi]) + '</span><span class="mid"><span class="py">' + esc(W.py[wi]) +
+      '</span><span class="en">' + esc(W.en[wi]) + '</span></span><span class="pill">' + (W.hsk[wi] ? "HSK " + W.hsk[wi] : "—") + "</span></a>";
+  }
+  function listMore(id, items, render, n) {
+    var first = items.slice(0, n).map(render).join("");
+    return '<div class="rows" id="' + id + '">' + first + "</div>" + (items.length > n ? '<button class="btn more" data-more="' + id + '">Show all ' + items.length + "</button>" : "");
+  }
+  var moreStore = {};
+  function meter(k, l, q, total) {
+    function w(x) { return total ? (100 * x / total).toFixed(2) : 0; }
+    return '<div class="meter" title="known ' + k + ", learning " + l + ", queued " + q + " of " + total + '"><i class="k" style="width:' + w(k) + '%"></i><i class="l" style="width:' + w(l) + '%"></i><i class="q" style="width:' + w(q) + '%"></i></div>';
+  }
+  function legend() { return PUB ? '<div class="legend"><span><i class="dot s3"></i>marked as known</span><span><i class="dot"></i>not yet</span></div>'
+    : '<div class="legend"><span><i class="dot s3"></i>known</span><span><i class="dot s2"></i>learning</span><span><i class="dot s1"></i>queued in your deck</span><span><i class="dot"></i>not met yet</span></div>'; }
+  function sayBtn(text) { return TTS ? '<button class="say" data-say="' + esc(text) + '" title="Listen" aria-label="Listen">▶</button>' : ""; }
+
+  // ---------------------------------------------------------------- hanzi page
+  function nodeName(n) { return n.name || n.form || ""; }
+  function nodeHtml(rec, n, color) {
+    var nm = nodeName(n), mint = !nm || isMint(nm), i = hIdx[nm], ci = cIdx[n.form || nm];
+    var gl = i != null ? H.gl[i] : ci != null ? C[ci].label : mint ? (n.kids ? "unnamed group" : "") : "";
+    var href = i != null ? hLink(nm) : ci != null ? "#c-" + ci : null;
+    var head = (color ? '<span class="mark" style="background:var(--' + color + ')"></span>' : "") + mini(rec, n.strokes) +
+      '<span><span class="nm">' + (safe(nm) ? esc(nm) : "") + (i != null ? ' <span class="py">' + esc(H.py[i]) + "</span>" : "") + '</span><div class="gl">' + esc(gl) + "</div></span>";
+    var kids = n.kids ? '<div class="kids">' + n.kids.map(function (k) { return nodeHtml(rec, k, null); }).join("") + "</div>" : "";
+    return '<div class="node' + (n.kids ? "" : " leaf") + '">' + (href ? '<a href="' + href + '">' + head + "</a>" : '<div class="nh">' + head + "</div>") + kids + "</div>";
+  }
+  function hanziPage(g) {
+    var i = hIdx[g];
+    if (i == null) { view.innerHTML = '<p class="load">' + esc(g) + " is not in the atlas.</p>"; return; }
+    view.innerHTML = '<p class="load">Opening ' + esc(g) + "…</p>";
+    hChunk(i).then(function (ch) {
+      var r = ch[g] || {}; r.g = g;
+      var st = sc(H.st[i]), ety = r.ety || {}, o = r.origin;
+      var typeText = { ideographic: "Ideograph: its parts combine their meanings", pictographic: "Pictograph: it was a drawing of the thing", pictophonetic: "Meaning part + sound part" }[ety.type] || "";
+      var tree = r.t && r.t.kids ? '<section class="card"><h2>How it is built</h2><div class="tree">' + r.t.kids.map(function (k, j) { return nodeHtml(r, k, "c" + (j % 6)); }).join("") +
+        '</div><p class="small muted">Colours match the drawing. Every part is drawn from this character’s own strokes; click a part to open it.</p></section>'
+        : (H.lv[i] ? '<section class="card"><h2>How it is built</h2><p class="muted">One piece: this character is itself an atomic component.</p></section>' : "");
+      var chips = "", cell = function (x) { return hIdx[x] != null ? hzCell(x, true) : formText(x); };
+      var oType = o && { picture: "Picture: it was a drawing of the thing", sign: "Sign: an abstract mark, or a mark added to a picture", "meaning+meaning": "Meaning + meaning: its parts combine their meanings", "meaning+sound": "Meaning part + sound part", loan: "Loan: borrowed for its sound", unclear: "Unclear or disputed" }[o.type];
+      var oForm = o && { "part-replaced": "Simplified: a part was swapped for a simpler one", shortened: "Simplified: a shortened or cursive shape", merged: "Simplified: took over the form of another character", corrupted: "The parts changed shape over time; the build no longer shows" }[o.form];
+      var oFit = o && { same: "still exact today", tone: "same sound, other tone", rhyme: "rhymes today", start: "same first sound only", weak: "no longer a good hint" }[o.fit];
+      var sem = o && o.type ? o.sem : ety.sem, pho = o && o.type ? o.pho : ety.pho;
+      if (sem && sem.length) chips += "<dt>Meaning part</dt><dd>" + Array.from(sem).map(cell).join(" ") + "</dd>";
+      if (pho) chips += "<dt>Sound part</dt><dd>" + cell(pho) + (oFit ? ' <span class="small muted">' + oFit + "</span>" : "") + "</dd>";
+      var tt = oType || typeText;
+      var origin = '<section class="card"><h2>Where it comes from</h2>' +
+        (r.name ? '<p class="petname">“' + esc(r.name) + '”</p>' : "") +
+        (o ? '<p class="origin">' + esc(o.says) + '</p><p class="small muted">' + esc(o.src || "") + (o.conf ? " · confidence " + esc(o.conf) : "") + "</p>" : "") +
+        (tt || ety.hint || chips ? '<dl class="kv">' + (tt ? "<dt>Type</dt><dd>" + tt + "</dd>" : "") + (oForm ? "<dt>Today</dt><dd>" + oForm + "</dd>" : "") + (!o && ety.hint ? "<dt>In short</dt><dd>" + esc(ety.hint) + "</dd>" : "") + chips + "</dl>" : "") +
+        (!o && !typeText && !ety.hint ? '<p class="muted">No origin note yet for this character.</p>' : "") +
+        (r.kw || r.story ? '<dl class="kv"><dt>Older keyword</dt><dd><b>' + esc(r.kw || "") + "</b></dd>" + (r.story ? "<dt>Story</dt><dd>" + esc(r.story) + "</dd>" : "") + "</dl>" : "") + "</section>";
+      var inside = r["in"] ? Array.from(r["in"]).filter(function (x) { return x !== g; }) : [];
+      var fam = inside.length ? '<section class="card"><h2>Appears inside ' + inside.length + (inside.length >= 60 ? "+" : "") + ' characters</h2><div class="chips">' + inside.map(function (x) { return hzCell(x, true); }).join("") +
+        '</div><p class="small muted">Read the pinyin across the row: where it repeats, this character is giving the sound.</p></section>' : "";
+      var ws = r.w || [];
+      moreStore.hw = ws;
+      var words = '<section class="card"><h2>Words with ' + esc(g) + "</h2>" + (ws.length ? listMore("hw", ws, wRow, 8) : '<p class="muted">No word in your dictionary uses it yet.</p>') + "</section>";
+      view.innerHTML = '<div class="cols"><div class="stick stack"><div class="tian" id="tian"></div><div class="tools">' +
+        (r.m ? '<button class="btn" id="play">Write it</button>' : "") + sayBtnBig(g) + markBtn("h", g) + "</div></div>" +
+        '<div class="stack"><div class="head"><div class="eyebrow">Hanzi · frequency rank ' + H.rank[i] + (r.p ? " · " + r.p.length + " strokes" : "") + '</div><div class="readings"><h1 class="han">' + esc(g) + "</h1>" +
+        (r.py && r.py.length ? r.py : [H.py[i]]).map(function (p) { return '<span class="py">' + esc(p) + "</span>"; }).join("") + pill(st) + (r.trad ? '<span class="pill">traditional <span class="han">' + esc(r.trad) + "</span></span>" : "") +
+        '</div><p style="margin:0;max-width:65ch">' + esc(r.def || H.gl[i]) + "</p></div>" + tree + origin + fam + words + "</div></div>";
+      draw($("tian"), r);
+      var play = $("play"); if (play) play.onclick = function () { animate($("tian"), r); };
+    }).catch(fail);
+  }
+  function sayBtnBig(text) { return TTS ? '<button class="btn" data-say="' + esc(text) + '">Listen</button>' : ""; }
+
+  // ---------------------------------------------------------------- word page
+  function sentHtml(s, wi) {
+    var zh = s.tok ? s.tok.map(function (t) {
+      if (t[1] < 0) return esc(t[0]);
+      return '<a class="s' + sc(W.st[t[1]]) + (t[1] === wi ? " me" : "") + '" href="#w-' + t[1] + '" title="' + esc(W.py[t[1]] + " · " + W.en[t[1]]) + '">' + esc(t[0]) + "</a>";
+    }).join("") : esc(s.zh);
+    return '<div class="sent"><div class="zh">' + zh + "</div>" + (s.py ? '<div class="py pyline"' + (showPy ? "" : " hidden") + ">" + esc(s.py) + "</div>" : "") + "<div>" + esc(s.en || "") + '</div><div class="meta">' + sayBtn(s.zh) +
+      (s["new"] === 0 ? '<span class="pill s3">you know every other word</span>' : s["new"] ? '<span class="pill">' + s["new"] + " other new word" + (s["new"] > 1 ? "s" : "") + "</span>" : "") + '<span class="small muted">' + esc(s.src || "") + "</span></div></div>";
+  }
+  function wordPage(wi) {
+    if (!(wi >= 0 && wi < W.zh.length)) { view.innerHTML = '<p class="load">That word is not in the atlas.</p>'; return; }
+    view.innerHTML = '<p class="load">Opening ' + esc(W.zh[wi]) + "…</p>";
+    wChunk(wi).then(function (ch) {
+      var r = ch[wi] || {}, zh = W.zh[wi], st = sc(W.st[wi]), c = r.card, syl = (W.py[wi] || "").split(/\s+/);
+      var chars = Array.from(zh), perChar = syl.length === chars.length;
+      var tiles = chars.map(function (g, k) {
+        var i = hIdx[g];
+        return '<a class="wchar" href="' + hLink(g) + '"><span class="g">' + esc(g) + '</span><span class="py">' + esc(perChar ? syl[k] : i != null ? H.py[i] : "") + '</span><span class="gl">' + esc(i != null ? H.gl[i] : "") + "</span></a>";
+      }).join("");
+      var z = W.z[wi], freq = z ? (z >= 6 ? "among the most common words" : z >= 5 ? "very common" : z >= 4 ? "common" : z >= 3 ? "less common" : "rare") : "";
+      var card = c ? '<section class="card"><h2>Your card</h2><dl class="kv"><dt>Deck</dt><dd>' + esc(c.deck) + "</dd><dt>State</dt><dd>" + esc(c.state) + "</dd>" +
+        (c.recall != null ? "<dt>Chance you recall it today</dt><dd>" + Math.round(c.recall * 100) + "%</dd>" : "") + (c.stab != null ? "<dt>Memory holds for about</dt><dd>" + (c.stab >= 10 ? Math.round(c.stab) : (+c.stab).toFixed(1)) + " days</dd>" : "") +
+        (c.last ? "<dt>Last reviewed</dt><dd>" + esc(c.last) + "</dd>" : "") + "</dl></section>" : "";
+      var ss = r.s || [];
+      view.innerHTML = '<div class="stack"><div class="head"><div class="eyebrow">Word' + (W.hsk[wi] ? " · HSK " + W.hsk[wi] : "") + (freq ? " · " + freq : "") + '</div><div class="word-big">' + tiles + '</div><div class="readings"><span class="py">' + esc(W.py[wi]) + "</span>" + pill(st) + sayBtnBig(zh) + markBtn("w", zh) +
+        (r.trad && r.trad !== zh ? '<span class="pill">traditional <span class="han">' + esc(r.trad) + "</span></span>" : "") + '</div><h1 style="font-size:1.5rem">' + esc(r.def || W.en[wi]) + "</h1></div>" +
+        '<div class="two"><section class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2>In sentences</h2><button class="btn' + (showPy ? " on" : "") + '" id="pyt">Pinyin</button></div>' +
+        (ss.length ? ss.map(function (s) { return sentHtml(s, wi); }).join("") : '<p class="muted">No example sentence in your database yet.</p>') + "</section>" + (card || "") + "</div></div>";
+      var t = $("pyt"); if (t) t.onclick = function () { showPy = !showPy; t.classList.toggle("on", showPy); view.querySelectorAll(".pyline").forEach(function (e) { e.hidden = !showPy; }); };
+    }).catch(fail);
+  }
+
+  // ---------------------------------------------------------------- components
+  function compGlyph(c) { return formText(c.f) || '<span class="muted">◌</span>'; }
+  function partsPage() {
+    var k = C.filter(function (c) { return sc(c.st) >= 2; }).length;
+    view.innerHTML = '<div class="head"><div class="eyebrow">Components</div><h1>' + C.length + ' pieces build all 3,500 characters</h1><p style="margin:0;max-width:65ch">These are the atomic components of the national standard (GF 0014). Most used first.' + (k ? " " + k + " have a card you are learning or know." : "") + "</p>" + (k ? legend() : "") + "</div>" +
+      '<section class="card"><div class="chips">' + C.map(function (c, i) { return '<a class="hz s' + sc(c.st) + '" href="#c-' + i + '" title="' + esc((c.label || "") + " · in " + c.n + " characters") + '">' + compGlyph(c) + "</a>"; }).join("") + "</div></section>";
+  }
+  function compPage(ci) {
+    var c = C[ci];
+    if (!c) { partsPage(); return; }
+    var users = [], gs = HG;
+    view.innerHTML = '<p class="load">Opening…</p>';
+    var exI = hIdx[c.ex];
+    (exI != null ? hChunk(exI) : Promise.resolve({})).then(function (ch) {
+      var ex = ch[c.ex], asHanzi = hIdx[c.f];
+      view.innerHTML = '<div class="cols"><div class="stick stack"><div class="tian" id="tian"></div><p class="small muted" style="text-align:center;margin:0">Shown inside <a class="han" href="' + hLink(c.ex) + '" style="color:var(--seal)">' + esc(c.ex) + "</a></p></div>" +
+        '<div class="stack"><div class="head"><div class="eyebrow">Atomic component · in ' + c.n + ' characters</div><div class="readings"><h1 class="han">' + formText(c.f) + "</h1>" + (PUB ? "" : pill(c.st)) + "</div><p class=\"petname\" style=\"margin:0\">" + esc(c.label || "No name of its own") + "</p>" + (c.says ? '<p class="origin" style="margin:0">' + esc(c.says) + "</p>" : "") + (c.old ? '<p class="small muted" style="margin:0">Older label: ' + esc(c.old) + "</p>" : "") +
+        (asHanzi != null ? '<p style="margin:0"><a href="' + hLink(c.f) + '" style="color:var(--seal)">Open ' + esc(c.f) + " as a character →</a></p>" : "") + '</div><section class="card"><h2>Characters built with it</h2><div class="chips" id="users"><span class="muted">Looking through the trees…</span></div></section></div></div>';
+      if (ex && ex.p) { var on = {}; (c.exs || []).forEach(function (s) { on[s] = 1; }); $("tian").innerHTML = glyphSvg(ex, function (i) { return on[i] ? "c0" : "faint"; }, GUIDES); }
+      return usersOf(c.f);
+    }).then(function (list) {
+      var el = $("users"); if (!el) return;
+      el.innerHTML = list.length ? list.slice(0, 240).map(function (g) { return hzCell(g); }).join("") + (list.length > 240 ? '<span class="muted small">and ' + (list.length - 240) + " more</span>" : "") : '<span class="muted">None found.</span>';
+    }).catch(fail);
+  }
+  function usersOf(f) { return get("data/forms.json").then(function (idx) { return Array.from(idx[f] || ""); }); }
+
+  // ---------------------------------------------------------------- home, map, road
+  var HG = [];
+  function publicHome() {
+    var nk = HG.filter(function (g, i) { return H.st[i] === 3; }), wk = 0, lv = {};
+    W.st.forEach(function (st, i) { var l = W.hsk[i]; if (st === 3) wk++; if (l) { lv[l] = lv[l] || [0, 0]; lv[l][1]++; if (st === 3) lv[l][0]++; } });
+    var hsk = Object.keys(lv).sort().map(function (l) { return '<b class="py">HSK ' + l + "</b>" + meter(lv[l][0], 0, 0, lv[l][1]) + '<span class="small muted">' + lv[l][0] + " / " + lv[l][1] + "</span>"; }).join("");
+    var pick = HG[Math.floor(Math.random() * 300)];
+    view.innerHTML = '<div class="hero"><div class="eyebrow">An atlas of written Chinese</div><h1>' + HG.length.toLocaleString() + " characters, taken apart down to <b>" + C.length + "</b> pieces.</h1>" +
+      '<p style="margin:0;max-width:65ch">Open any character to see how it is built, where it comes from, how it is written and which words use it. ' + W.zh.length.toLocaleString() + ' words with example sentences. Mark what you know and the map fills in; your marks stay in this browser.</p>' +
+      '<div class="tiles"><a class="tile" href="#map"><span class="eyebrow">Characters</span><span class="n">' + nk.length + '</span><span class="small muted">marked of ' + HG.length + ' · see the map →</span></a>' +
+      '<div class="tile"><span class="eyebrow">Words</span><span class="n">' + wk + '</span><span class="small muted">marked of ' + W.zh.length + '</span></div>' +
+      '<a class="tile" href="#parts"><span class="eyebrow">Components</span><span class="n">' + C.length + '</span><span class="small muted">atomic pieces build every character →</span></a>' +
+      '<a class="tile" href="' + hLink(pick) + '"><span class="eyebrow">Surprise me</span><span class="n han">' + esc(pick) + '</span><span class="small muted">open a common character →</span></a></div></div>' +
+      '<div class="two"><section class="card"><h2>The 60 most common characters</h2><div class="chips">' + HG.slice(0, 60).map(function (g) { return hzCell(g); }).join("") + "</div></section>" +
+      '<section class="card"><h2>Words by HSK 3.0 level</h2><div class="hsk">' + hsk + "</div>" + legend() + "</section></div>" +
+      '<section class="about"><h2 style="color:var(--ink)">Sources</h2><p>Stroke outlines, stroke order and short etymology hints: <a href="https://github.com/skishore/makemeahanzi">Make Me a Hanzi</a> (derived from Arphic fonts, Arphic Public License). Word meanings: <a href="https://cc-cedict.org/">CC-CEDICT</a> (CC BY-SA 4.0) and the HSK 3.0 word lists. Example sentences: <a href="https://tatoeba.org/">Tatoeba</a> (CC BY 2.0 FR), sentences written for this site, and short lines quoted from freely watchable videos, each shown with its source: the <a href="https://www.youtube.com/playlist?list=PLzViq8fRe0iNrA1s1OOZMK6l8iyzIIJzN">Guided Mandarin</a> audio course, <a href="https://www.youtube.com/watch?v=U4h59nMjb0A">Zhangkai Chinese</a> and the drama Pursuit of Jade (逐玉, iQIYI). They remain the work of their authors; ask and they are removed. Components follow the Chinese national standard GF 0014-2009; the decomposition trees were built for this site from that standard, the stroke data and the CHISE / cjkvi IDS data. Origin notes, classes and pet names were written with AI assistance from the glyph-origin sections of <a href="https://en.wiktionary.org/">English Wiktionary</a> (CC BY-SA 4.0), the <a href="https://www.dong-chinese.com/">Dong Chinese</a> character data (CC BY-SA 4.0) and Make Me a Hanzi; each note states its sources and its confidence, and the notes are shared under CC BY-SA 4.0. Treat them as a starting point.</p></section>';
+  }
+  function homePage() {
+    if (PUB) { publicHome(); return; }
+    var s = CORE.stats || {}, w = s.words || {}, h = s.hanzi || {}, c = s.comps || {}, road = CORE.road || {};
+    var hsk = (s.hsk || []).map(function (l) { return '<b class="py">HSK ' + esc(l.level) + "</b>" + meter(l.known, l.learning, l.queued, l.total) + '<span class="small muted">' + (l.known + l.learning) + " / " + l.total + "</span>"; }).join("");
+    var known = HG.filter(function (g, i) { return sc(H.st[i]) >= 2; }), pick = known.length ? known[Math.floor(Math.random() * known.length)] : HG[0];
+    var q = (road.queue || []).slice(0, 6);
+    view.innerHTML = '<div class="hero"><div class="eyebrow">Today · data from ' + esc((CORE.built || "").slice(0, 10)) + "</div><h1>You can read <b>" + ((w.known || 0) + (w.learning || 0)) + "</b> words written with <b>" + ((h.known || 0) + (h.learning || 0)) + "</b> characters.</h1>" +
+      '<div class="tiles"><div class="tile"><span class="eyebrow">Words</span><span class="n">' + (w.known || 0) + '</span><span class="small muted">known · ' + (w.learning || 0) + " learning · " + (w.queued || 0) + ' queued</span></div>' +
+      '<a class="tile" href="#map"><span class="eyebrow">Characters</span><span class="n">' + ((h.known || 0) + (h.learning || 0)) + '</span><span class="small muted">of ' + (h.total || HG.length) + ' in the atlas · see the map →</span></a>' +
+      '<a class="tile" href="#parts"><span class="eyebrow">Components</span><span class="n">' + C.length + '</span><span class="small muted">atomic pieces build every character →</span></a>' +
+      '<div class="tile"><span class="eyebrow">Sentences</span><span class="n">' + (s.readable || 0) + '</span><span class="small muted">of ' + (s.sentences || 0) + " you can already read in full</span></div></div></div>" +
+      '<div class="two"><section class="card"><h2>Coming next in your deck</h2><div class="rows">' + (q.length ? q.map(wRow).join("") : '<p class="muted">The queue is empty.</p>') + '</div><a class="btn more" href="#road">See the whole road →</a></section>' +
+      '<section class="card"><h2>Where you stand in HSK 3.0</h2><div class="hsk">' + hsk + "</div>" + legend() + "</section></div>" +
+      '<section class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Characters you already read</h2><a class="btn" href="' + hLink(pick) + '">Open one at random: <span class="han">' + esc(pick) + "</span></a></div>" +
+      '<div class="chips">' + known.slice(0, 120).map(function (g) { return hzCell(g); }).join("") + "</div>" + (known.length > 120 ? '<a class="btn more" href="#map">All ' + known.length + " on the map →</a>" : "") + "</section>";
+  }
+  var mapFilter = "all";
+  function mapPage() {
+    var counts = [0, 0, 0, 0];
+    HG.forEach(function (g, i) { counts[sc(H.st[i])]++; });
+    var cells = HG.map(function (g, i) { var st = sc(H.st[i]); if (mapFilter !== "all" && String(st) !== mapFilter) return ""; return '<a class="s' + st + '" href="' + hLink(g) + '" title="' + esc(H.py[i] + " · " + H.gl[i] + " · rank " + H.rank[i]) + '">' + esc(g) + "</a>"; }).join("");
+    var f = PUB ? [["all", "All " + HG.length], ["3", "Known " + counts[3]], ["0", "Not yet " + counts[0]]] : [["all", "All " + HG.length], ["3", "Known " + counts[3]], ["2", "Learning " + counts[2]], ["1", "Queued " + counts[1]], ["0", "Not met " + counts[0]]];
+    var top = HG.slice(0, 500).filter(function (g, i) { return sc(H.st[i]) >= 2; }).length;
+    view.innerHTML = '<div class="head"><div class="eyebrow">Map</div><h1>Every character, most frequent first</h1><p style="margin:0;max-width:65ch">Read it like a page: top left is the most common character in Chinese. ' + (PUB ? "You have marked " : "You hold ") + top + ' of the first 500, which carry most of everyday text.</p>' +
+      '<div class="tools" style="justify-content:flex-start">' + f.map(function (x) { return '<button class="btn' + (mapFilter === x[0] ? " on" : "") + '" data-filter="' + x[0] + '">' + x[1] + "</button>"; }).join("") + '</div></div><div class="map han">' + cells + "</div>";
+  }
+  var openPart = -1;
+  function roadPage() {
+    var road = CORE.road || {}, parts = CORE.parts || [], queue = road.queue || [], next = road.next || [];
+    if (openPart < 0) { openPart = parts.findIndex(function (p) { return p.queued > 0; }); if (openPart < 0) openPart = 0; }
+    var strip = parts.map(function (p, i) { var t = (p.words || []).length; return '<button class="part' + (i === openPart ? " on" : "") + '" data-part="' + i + '"><b>' + esc(String(p.name).replace(/^Part\s*/i, "")) + "</b>" + meter(p.known, p.learning, p.queued, t) + "</button>"; }).join("");
+    var p = parts[openPart];
+    moreStore.rq = queue; moreStore.rn = next;
+    view.innerHTML = '<div class="head"><div class="eyebrow">Road</div><h1>' + queue.length + ' words wait in your deck, then the next ' + next.length + " are already chosen</h1></div>" +
+      (parts.length ? '<section class="card"><h2>Guided Mandarin, part by part</h2><div class="parts">' + strip + "</div>" + legend() + (p ? '<h3 style="font-size:0.95rem">' + esc(p.name) + '</h3><div class="rows">' + (p.words || []).map(wRow).join("") + "</div>" : "") + "</section>" : "") +
+      '<div class="two"><section class="card"><h2>In your deck, in the order you will meet them</h2>' + (queue.length ? listMore("rq", queue, wRow, 20) : '<p class="muted">Nothing queued.</p>') + "</section>" +
+      '<section class="card"><h2>After that</h2><p class="small muted" style="margin:0">HSK 3.0 levels 1 to 3 first, then by how common the word is.</p>' + (next.length ? listMore("rn", next, wRow, 20) : '<p class="muted">Not computed.</p>') + "</section></div>";
+  }
+
+  // ---------------------------------------------------------------- search
+  var res = $("results"), q = $("q");
+  function search(text) {
+    text = text.trim();
+    if (!text) { res.hidden = true; return; }
+    var hs = [], ws = [], isHan = /[⺀-鿿\u{20000}-\u{3ffff}]/u.test(text), p = plain(text), low = text.toLowerCase(), i;
+    if (isHan) {
+      Array.from(text).forEach(function (g) { if (hIdx[g] != null && hs.indexOf(hIdx[g]) < 0) hs.push(hIdx[g]); });
+      for (i = 0; i < W.zh.length && ws.length < 12; i++) if (W.zh[i].indexOf(text) >= 0) ws.push(i);
+    } else {
+      var re = new RegExp("(^|[^a-z])" + low.replace(/[^a-z0-9 ]/g, ""), "i");
+      for (i = 0; i < HG.length && hs.length < 8; i++) if (p && plain(H.py[i]) === p) hs.push(i);
+      for (i = 0; i < HG.length && hs.length < 8; i++) if (low.length > 1 && H.nm && H.nm[i] === low && hs.indexOf(i) < 0) hs.push(i);
+      for (i = 0; i < HG.length && hs.length < 8; i++) if (low.length > 1 && (re.test(H.gl[i]) || (H.nm && re.test(H.nm[i]))) && hs.indexOf(i) < 0) hs.push(i);
+      for (i = 0; i < W.zh.length && ws.length < 12; i++) if (p && plain(W.py[i]).indexOf(p) === 0) ws.push(i);
+      for (i = 0; i < W.zh.length && ws.length < 12; i++) if (low.length > 1 && re.test(W.en[i]) && ws.indexOf(i) < 0) ws.push(i);
+    }
+    var html = "";
+    if (hs.length) html += '<div class="eyebrow">Characters</div>' + hs.map(function (k) { return '<a class="res" href="' + hLink(HG[k]) + '"><span class="dot s' + sc(H.st[k]) + '"></span><span class="zh">' + esc(HG[k]) + '</span><span class="py">' + esc(H.py[k]) + '</span><span class="en">' + esc(H.gl[k]) + "</span></a>"; }).join("");
+    if (ws.length) html += '<div class="eyebrow">Words</div>' + ws.map(function (k) { return '<a class="res" href="#w-' + k + '"><span class="dot s' + sc(W.st[k]) + '"></span><span class="zh">' + esc(W.zh[k]) + '</span><span class="py">' + esc(W.py[k]) + '</span><span class="en">' + esc(W.en[k]) + "</span></a>"; }).join("");
+    res.innerHTML = html || '<div class="res muted">Nothing found for “' + esc(text) + "”.</div>";
+    res.hidden = false;
+  }
+  q.addEventListener("input", function () { if (W) search(q.value); });
+  q.addEventListener("focus", function () { if (W && q.value) search(q.value); });
+  q.addEventListener("keydown", function (e) { if (e.key === "Enter") { var a = res.querySelector("a.res"); if (a) { location.hash = a.getAttribute("href"); res.hidden = true; q.blur(); } } if (e.key === "Escape") { res.hidden = true; } });
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest ? e.target : e.target.parentNode;
+    var mk = t.closest("[data-mark]"); if (mk) { toggleMark(mk.dataset.mark, mk.dataset.key); return; }
+    if (!t.closest(".search")) res.hidden = true; else if (t.closest("a.res")) { res.hidden = true; }
+    var b = t.closest("[data-more]"); if (b) { var id = b.dataset.more; $(id).innerHTML = moreStore[id].map(wRow).join(""); b.remove(); return; }
+    b = t.closest("[data-filter]"); if (b) { mapFilter = b.dataset.filter; mapPage(); return; }
+    b = t.closest("[data-part]"); if (b) { openPart = +b.dataset.part; var y = window.scrollY; roadPage(); window.scrollTo(0, y); return; }
+    b = t.closest("[data-say]"); if (b && TTS) { e.preventDefault(); TTS.speak(b.dataset.say, { language: "zh-CN", rate: 0.85 }).catch(function () {}); }
+  });
+
+  // ---------------------------------------------------------------- routing
+  function fail(e) { view.innerHTML = '<p class="load">Could not load this page’s data (' + esc(e && e.message || e) + "). Reload to try again.</p>"; }
+  function route(keep) {
+    if (!CORE || !W) return;
+    var y0 = keep === true ? window.scrollY : 0;
+    var h = (location.hash || "#home").slice(1), m, v = "home";
+    clearTimeout(animTimer);
+    if ((m = /^h-([0-9a-f]+)$/.exec(h))) { hanziPage(fromHex(m[1])); v = ""; }
+    else if ((m = /^w-(\d+)$/.exec(h))) { wordPage(+m[1]); v = ""; }
+    else if ((m = /^c-(\d+)$/.exec(h))) { compPage(+m[1]); v = "parts"; }
+    else if (h === "map") { mapPage(); v = "map"; }
+    else if (h === "road" && !PUB) { roadPage(); v = "road"; }
+    else if (h === "parts") { partsPage(); v = "parts"; }
+    else homePage();
+    $("nav").querySelectorAll("a").forEach(function (a) { a.classList.toggle("on", a.dataset.v === v); });
+    window.scrollTo(0, y0);
+  }
+  window.addEventListener("hashchange", function () { route(); });
+  Promise.all([get("data/core.json"), get("data/words.json"), get("data/shapes.json").catch(function () { return {}; })]).then(function (r) {
+    CORE = r[0]; W = r[1]; SH = r[2] || {}; H = CORE.hanzi; C = CORE.comps || []; PUB = !!CORE.public;
+    HG = Array.from(H.g); HG.forEach(function (g, i) { hIdx[g] = i; });
+    C.forEach(function (c, i) { cIdx[c.f] = i; });
+    if (PUB) { loadMarks(); var rl = document.querySelector('#nav a[data-v="road"]'); if (rl) rl.hidden = true; document.querySelector('#nav a[data-v="home"]').textContent = "Home"; }
+    route();
+  }).catch(fail);
+  if (window.claude && window.claude.use) window.claude.use("tts").then(function (t) { if (t) { TTS = t; route(true); } }).catch(function () {});
+  else if (window.speechSynthesis && window.SpeechSynthesisUtterance) TTS = { speak: function (text, o) { var u = new SpeechSynthesisUtterance(text); u.lang = "zh-CN"; u.rate = (o && o.rate) || 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); return Promise.resolve(); } };
+})();
+</script>
+
+</body>
+</html>
