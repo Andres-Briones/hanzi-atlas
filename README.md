@@ -54,6 +54,12 @@ with pinyin, English and 4,557 example sentences; "Listen" uses your browser's s
 
 The page follows your system's light or dark setting.
 
+### Search
+
+One box finds characters, components and words by the character itself, by pinyin (`jia`, or `jia1` / `jiā`
+for one tone), by pet name, or by any of their English meanings: typing `house` lists 家, 房, 屋 and the
+others that mean it, most frequent first. The graph has the same search in its own find box.
+
 ## In numbers
 
 | | |
