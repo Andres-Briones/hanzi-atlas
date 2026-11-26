@@ -129,7 +129,7 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
 .hz { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 8px; font: 500 1.35rem/1 var(--han); background: var(--none-soft); border: 1px solid transparent; position: relative; }
 .hz:hover { border-color: var(--ink-3); }
 .hz.s3 { background: var(--known-soft); color: var(--known); } .hz.s2 { background: var(--learn-soft); color: var(--learn); } .hz.s1 { background: var(--queue-soft); color: var(--queue); }
-.hzp { display: grid; justify-items: center; gap: 1px; } .hzp .py { font-size: 0.68rem; }
+.hzp { display: inline-grid; justify-items: center; gap: 1px; vertical-align: middle; } .hzp .py { font-size: 0.68rem; }
 .rows { display: grid; }
 .row { display: grid; grid-template-columns: 12px minmax(3.2em, auto) minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 8px 6px; border-bottom: 1px solid var(--line); border-radius: 6px; }
 .row:last-child { border-bottom: 0; }
@@ -182,7 +182,11 @@ main.gmain { max-width: none; padding: 0; display: block; }
 .gwrap .load { position: absolute; inset: 40% 0 auto; }
 .gtop { position: absolute; top: 10px; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; pointer-events: none; }
 .gtop > * { pointer-events: auto; }
-.gtop input { width: min(260px, 100%); flex: 1 1 150px; max-width: 260px; padding: 7px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 0.9rem; }
+.gfind { position: relative; flex: 1 1 150px; max-width: 260px; }
+.gfind .results { right: auto; width: min(380px, calc(100vw - 32px)); max-height: min(60vh, 440px); }
+.res .why { margin-left: auto; padding-left: 8px; white-space: nowrap; color: var(--ink-3); font-size: 0.74rem; }
+.res.more { color: var(--ink-3); font-size: 0.85rem; cursor: pointer; width: 100%; border: 0; background: none; font-family: inherit; text-align: left; }
+.gtop input { width: 100%; padding: 7px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 0.9rem; }
 .gtop input.miss { border-color: var(--seal); }
 .gbtns { display: flex; gap: 6px; }
 .gcard { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 16px; width: min(300px, calc(100% - 32px)); max-height: calc(100% - 76px); overflow: auto; background: color-mix(in srgb, var(--card) 95%, transparent); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 8px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.12); }
@@ -203,7 +207,7 @@ main.gmain { max-width: none; padding: 0; display: block; }
 <div class="bar"><div class="bar-in">
   <a class="brand" href="#home"><span class="stamp">字</span>Hanzi Atlas</a>
   <div class="search">
-    <input id="q" type="search" placeholder="Search a hanzi, pinyin or English: 好, xihuan, water" autocomplete="off" aria-label="Search">
+    <input id="q" type="search" placeholder="Search a hanzi, pinyin, name or meaning: 好, jia, house" autocomplete="off" aria-label="Search">
     <div class="results" id="results" hidden></div>
   </div>
   <nav id="nav">
@@ -291,6 +295,81 @@ main.gmain { max-width: none; padding: 0; display: block; }
     route(true);
   }
   function markBtn(kind, key) { return PUB ? '<button class="btn' + (marks[kind][key] ? " on" : "") + '" data-mark="' + kind + '" data-key="' + esc(key) + '">' + (marks[kind][key] ? "✓ I know this" : "Mark as known") + "</button>" : ""; }
+
+  // A word's pinyin cut into one syllable per character ("gǎnjué", 2 -> ["gǎn", "jué"]); null when it does not fit.
+  var SYL = /^(zh|ch|sh|[bpmfdtnlgkhjqxrzcsyw])?(iang|iong|uang|ang|eng|ing|ong|iao|ian|uai|uan|van|ai|ei|ao|ou|an|en|er|ia|ie|iu|in|ua|uo|ui|un|ue|ve|vn|a|o|e|i|u|v|ng|n|m|r)$/;
+  function syllables(py, n) {
+    var sp = py.trim().split(/\s+/); if (sp.length === n) return sp;
+    var orig = [], brk = {};  // brk: a syllable must start here (after an apostrophe, a space or a hyphen)
+    Array.from(py.normalize("NFC")).forEach(function (c) { if (plain(c)) orig.push(c); else brk[orig.length] = 1; });
+    var flat = orig.map(plain).join("");
+    if (flat.length !== orig.length) return null;
+    function cut(at, left, strict) {
+      if (!left) return at === flat.length ? [] : null;
+      if (strict && at && !brk[at] && /[aoe]/.test(flat[at])) return null;  // inside a word such a syllable is written with an apostrophe
+      for (var len = Math.min(6, flat.length - at); len > 0; len--) {
+        var end = at + len, crosses = false;
+        for (var b = at + 1; b < end; b++) if (brk[b]) crosses = true;
+        if (crosses || !SYL.test(flat.substr(at, len))) continue;
+        var rest = cut(end, left - 1, strict); if (rest) return [orig.slice(at, end).join("")].concat(rest);
+      }
+      return null;
+    }
+    return cut(0, n, true) || cut(0, n, false);  // second try: data that leaves the apostrophe out (dáàn)
+  }
+
+  // ---------------------------------------------------------------- finding: one matcher for the top search and the graph
+  var TONE = { "̄": 1, "́": 2, "̌": 3, "̀": 4 }, FX = null;
+  function toneOf(s) { var d = /[1-5]\s*$/.exec(s); if (d) return +d[0]; var m = /[̄́̌̀]/.exec(s.normalize("NFD")); return m ? TONE[m[0]] : 0; }
+  function findIndex() {
+    return FX || (FX = { py: H.py.map(plain), tone: H.py.map(function (p) { return toneOf(p) || 5; }),
+      gl: H.gl.map(function (x) { return x.toLowerCase(); }), en: H.en ? H.en : H.gl.map(function (x) { return x.toLowerCase(); }),
+      wpy: W.py.map(plain), wen: W.en.map(function (x) { return x.toLowerCase(); }) });
+  }
+  // Returns { hs: [[hanzi index, why]], ps: [[key, label]] (components and groups), ws: [word index] }, best first.
+  function find(text) {
+    text = text.trim(); var X = findIndex(), hs = [], ps = [], ws = [], seenH = {}, seenW = {}, i;
+    function addH(i, why) { if (!seenH[i]) { seenH[i] = 1; hs.push([i, why]); } }
+    function addW(i) { if (!seenW[i]) { seenW[i] = 1; ws.push(i); } }
+    if (/[⺀-鿿\u{20000}-\u{3ffff}]/u.test(text)) {
+      Array.from(text).forEach(function (g) { if (hIdx[g] != null) addH(hIdx[g], ""); else if (cIdx[g] != null) ps.push([g, C[cIdx[g]].label]); else if (gIdx[g] != null) ps.push([g, CORE.gn[gIdx[g]]]); });
+      for (i = 0; i < W.zh.length; i++) if (W.zh[i] === text) addW(i);
+      for (i = 0; i < W.zh.length; i++) if (W.zh[i].indexOf(text) >= 0) addW(i);
+      return { hs: hs, ps: ps, ws: ws };
+    }
+    var p = plain(text), qt = toneOf(text), low = text.toLowerCase().replace(/[^a-z0-9' -]/g, " ").replace(/\s+/g, " ").trim();
+    var whole = low.length > 1 ? new RegExp("(^|[^a-z])" + low + "($|[^a-z])") : null, start = low.length > 2 ? new RegExp("(^|[^a-z])" + low) : null;
+    var item = low.length > 1 ? new RegExp("(^|[;,] *)(to |a |an |the )?" + low + " *($|[;,(])") : null;
+    if (p) {
+      for (i = 0; i < HG.length; i++) if (X.py[i] === p && (!qt || X.tone[i] === qt)) addH(i, "sound");
+      if (qt) for (i = 0; i < HG.length; i++) if (X.py[i] === p) addH(i, "sound, other tone");
+    }
+    if (whole) {  // most frequent first inside each step: the exact word as a name or as one of the meanings, then anywhere
+      for (i = 0; i < HG.length; i++) { if (H.nm && H.nm[i] === low) addH(i, "name"); else if (item.test(X.gl[i]) || item.test(X.en[i])) addH(i, "meaning"); }
+      for (i = 0; i < HG.length; i++) { if (H.nm && whole.test(H.nm[i])) addH(i, "name"); else if (whole.test(X.gl[i]) || whole.test(X.en[i])) addH(i, "meaning"); }
+    }
+    if (start) for (i = 0; i < HG.length; i++) if (start.test(X.gl[i]) || (H.nm && start.test(H.nm[i])) || start.test(X.en[i])) addH(i, "meaning");
+    if (p.length > 1 && !qt) for (i = 0; i < HG.length; i++) if (X.py[i].indexOf(p) === 0) addH(i, "sound starts " + p);
+    if (start || whole) {
+      var re = start || whole;
+      C.forEach(function (c) { if (hIdx[c.f] == null && re.test((c.label || "").toLowerCase())) ps.push([c.f, c.label]); });
+      (CORE.gk || []).forEach(function (k, j) { if (hIdx[k] == null && re.test((CORE.gn[j] || "").toLowerCase())) ps.push([k, CORE.gn[j]]); });
+    }
+    if (p) { for (i = 0; i < W.zh.length; i++) if (X.wpy[i] === p) addW(i); }
+    if (whole) { for (i = 0; i < W.zh.length; i++) if (item.test(X.wen[i])) addW(i); for (i = 0; i < W.zh.length; i++) if (whole.test(X.wen[i])) addW(i); }
+    if (p.length > 1) for (i = 0; i < W.zh.length; i++) if (X.wpy[i].indexOf(p) === 0) addW(i);
+    if (start) for (i = 0; i < W.zh.length; i++) if (start.test(X.wen[i])) addW(i);
+    return { hs: hs, ps: ps, ws: ws };
+  }
+  var findMore = {}, findSeq = 0;
+  function findSection(title, rows, first) {
+    if (!rows.length) return "";
+    var html = '<div class="eyebrow">' + title + " · " + rows.length + "</div>" + rows.slice(0, first).join("");
+    if (rows.length > first) { var id = "fm" + (++findSeq); findMore[id] = rows.slice(first, 200).join(""); html += '<button class="res more" data-findmore="' + id + '">+ ' + (Math.min(rows.length, 200) - first) + " more</button>"; }
+    return html;
+  }
+  function hRes(m, href) { var k = m[0]; return '<a class="res" href="' + href + '"><span class="dot s' + sc(H.st[k]) + '"></span><span class="zh">' + esc(HG[k]) + '</span><span class="py">' + esc(H.py[k]) + '</span><span class="en">' + esc((H.nm && H.nm[k] ? "“" + H.nm[k] + "” · " : "") + H.gl[k]) + '</span><span class="why">' + m[1] + "</span></a>"; }
+  function pRes(m, href) { return '<a class="res" href="' + href + '"><span class="dot s0"></span><span class="zh">' + formText(m[0]) + '</span><span class="en">' + esc(m[1]) + '</span><span class="why">' + (cIdx[m[0]] != null ? "component" : "group") + "</span></a>"; }
 
   // ---------------------------------------------------------------- small pieces
   function pill(st) { st = sc(st); if (PUB && st < 3) return ""; return '<span class="pill s' + st + '"><span class="dot s' + st + '"></span>' + ST[st] + "</span>"; }
@@ -410,11 +489,11 @@ main.gmain { max-width: none; padding: 0; display: block; }
     if (!(wi >= 0 && wi < W.zh.length)) { view.innerHTML = '<p class="load">That word is not in the atlas.</p>'; return; }
     view.innerHTML = '<p class="load">Opening ' + esc(W.zh[wi]) + "…</p>";
     wChunk(wi).then(function (ch) {
-      var r = ch[wi] || {}, zh = W.zh[wi], st = sc(W.st[wi]), c = r.card, syl = (W.py[wi] || "").split(/\s+/);
-      var chars = Array.from(zh), perChar = syl.length === chars.length;
+      var r = ch[wi] || {}, zh = W.zh[wi], st = sc(W.st[wi]), c = r.card;
+      var chars = Array.from(zh), syl = syllables(W.py[wi] || "", chars.length), perChar = !!syl;
       var tiles = chars.map(function (g, k) {
         var i = hIdx[g];
-        return '<a class="wchar" href="' + hLink(g) + '"><span class="g">' + esc(g) + '</span><span class="py">' + esc(perChar ? syl[k] : i != null ? H.py[i] : "") + '</span><span class="gl">' + esc(i != null ? H.gl[i] : "") + "</span></a>";
+        return '<a class="wchar" href="' + hLink(g) + '"><span class="g">' + esc(g) + '</span><span class="py">' + esc(perChar ? syl[k] : i != null ? H.py[i] : "") + '</span><span class="gl">' + esc(i != null && (!perChar || plain(syl[k]) === plain(H.py[i])) ? H.gl[i] : "") + "</span></a>";
       }).join("");
       var z = W.z[wi], freq = z ? (z >= 6 ? "among the most common words" : z >= 5 ? "very common" : z >= 4 ? "common" : z >= 3 ? "less common" : "rare") : "";
       var card = c ? '<section class="card"><h2>Your card</h2><dl class="kv"><dt>Deck</dt><dd>' + esc(c.deck) + "</dd><dt>State</dt><dd>" + esc(c.state) + "</dd>" +
@@ -564,7 +643,7 @@ main.gmain { max-width: none; padding: 0; display: block; }
     if (GV) { GV.go(tok); return; }
     view.classList.add("gmain");
     view.innerHTML = '<div class="gwrap" id="gwrap"><canvas id="gcv" tabindex="0" aria-label="Graph of every character, group and atomic component. Use the Find box to open one."></canvas>' +
-      '<div class="gtop"><input id="gq" type="search" placeholder="Find in the graph: 好, hao, good" aria-label="Find in the graph" autocomplete="off">' +
+      '<div class="gtop"><div class="gfind"><input id="gq" type="search" placeholder="Find in the graph: 好, hao, good" aria-label="Find in the graph" autocomplete="off"><div class="results" id="gres" hidden></div></div>' +
       '<span class="gbtns"><button class="btn" id="gzi" aria-label="Zoom in">+</button><button class="btn" id="gzo" aria-label="Zoom out">−</button><button class="btn" id="gall">Whole graph</button></span></div>' +
       '<div class="gcard" id="gcard" hidden></div><div class="gtip" id="gtip" hidden></div>' +
       '<div class="glegend" id="gleg"><span><i style="background:var(--ink-3)"></i>character</span><span><i style="background:var(--c3)"></i>group</span><span><i style="background:var(--seal)"></i>atomic component</span>' +
@@ -888,19 +967,25 @@ main.gmain { max-width: none; padding: 0; display: block; }
     });
     $("gzi").onclick = function () { step(1.6); }; $("gzo").onclick = function () { step(1 / 1.6); };
     $("gall").onclick = function () { if (location.hash === "#graph") { release(); whole(700); } else location.hash = "#graph"; };
+    function gfind() {
+      var text = gq.value.trim(), box = $("gres"); gq.classList.remove("miss");
+      if (!text) { box.hidden = true; return; }
+      findMore = {};
+      var f = find(text), tok = function (key) { var i = g.idx[key]; return i == null ? null : gTok(g, i); };
+      var hs = f.hs.filter(function (m) { return tok(HG[m[0]]); }), ps = f.ps.filter(function (m) { return tok(m[0]); });
+      box.innerHTML = findSection("Characters", hs.map(function (m) { return hRes(m, "#graph-" + tok(HG[m[0]])); }), 8) +
+        findSection("Components and groups", ps.map(function (m) { return pRes(m, "#graph-" + tok(m[0])); }), 6) ||
+        '<div class="res muted">Nothing in the graph for “' + esc(text) + "”.</div>";
+      box.hidden = false; gq.classList.toggle("miss", !hs.length && !ps.length);
+    }
+    gq.addEventListener("input", gfind);
+    gq.addEventListener("focus", function () { if (gq.value) gfind(); });
     gq.addEventListener("keydown", function (e) {
+      e.stopPropagation();
+      if (e.key === "Escape") { $("gres").hidden = true; return; }
       if (e.key !== "Enter") return;
-      var text = gq.value.trim(), found = -1, p = plain(text), low = text.toLowerCase(), i;
-      Array.from(text).some(function (ch) { if (g.idx[ch] != null) { found = g.idx[ch]; return true; } return false; });
-      if (found < 0 && p) for (i = 0; i < HG.length && found < 0; i++) if (plain(H.py[i]) === p && g.idx[HG[i]] != null) found = g.idx[HG[i]];
-      if (found < 0 && low.length > 1) {
-        var re = new RegExp("(^|[^a-z])" + low.replace(/[^a-z0-9 ]/g, ""), "i");
-        for (i = 0; i < HG.length && found < 0; i++) if (g.idx[HG[i]] != null && ((H.nm && H.nm[i] === low) || H.gl[i].toLowerCase() === low)) found = g.idx[HG[i]];
-        for (i = 0; i < HG.length && found < 0; i++) if (g.idx[HG[i]] != null && (re.test(H.gl[i]) || (H.nm && re.test(H.nm[i])))) found = g.idx[HG[i]];
-        for (i = 0; i < n && found < 0; i++) if (hIdx[g.key[i]] == null && re.test(gName(g, i))) found = i;
-      }
-      gq.classList.toggle("miss", found < 0);
-      if (found >= 0) { open(found); gq.blur(); }
+      gfind(); var a = $("gres").querySelector("a.res");
+      if (a) { location.hash = a.getAttribute("href"); $("gres").hidden = true; gq.blur(); }
     });
     function onResize() { if (!$("gcv")) return; resize(); need(); }
     function onTheme() { colours(); need(); }
@@ -932,21 +1017,11 @@ main.gmain { max-width: none; padding: 0; display: block; }
   function search(text) {
     text = text.trim();
     if (!text) { res.hidden = true; return; }
-    var hs = [], ws = [], isHan = /[⺀-鿿\u{20000}-\u{3ffff}]/u.test(text), p = plain(text), low = text.toLowerCase(), i;
-    if (isHan) {
-      Array.from(text).forEach(function (g) { if (hIdx[g] != null && hs.indexOf(hIdx[g]) < 0) hs.push(hIdx[g]); });
-      for (i = 0; i < W.zh.length && ws.length < 12; i++) if (W.zh[i].indexOf(text) >= 0) ws.push(i);
-    } else {
-      var re = new RegExp("(^|[^a-z])" + low.replace(/[^a-z0-9 ]/g, ""), "i");
-      for (i = 0; i < HG.length && hs.length < 8; i++) if (p && plain(H.py[i]) === p) hs.push(i);
-      for (i = 0; i < HG.length && hs.length < 8; i++) if (low.length > 1 && H.nm && H.nm[i] === low && hs.indexOf(i) < 0) hs.push(i);
-      for (i = 0; i < HG.length && hs.length < 8; i++) if (low.length > 1 && (re.test(H.gl[i]) || (H.nm && re.test(H.nm[i]))) && hs.indexOf(i) < 0) hs.push(i);
-      for (i = 0; i < W.zh.length && ws.length < 12; i++) if (p && plain(W.py[i]).indexOf(p) === 0) ws.push(i);
-      for (i = 0; i < W.zh.length && ws.length < 12; i++) if (low.length > 1 && re.test(W.en[i]) && ws.indexOf(i) < 0) ws.push(i);
-    }
-    var html = "";
-    if (hs.length) html += '<div class="eyebrow">Characters</div>' + hs.map(function (k) { return '<a class="res" href="' + hLink(HG[k]) + '"><span class="dot s' + sc(H.st[k]) + '"></span><span class="zh">' + esc(HG[k]) + '</span><span class="py">' + esc(H.py[k]) + '</span><span class="en">' + esc(H.gl[k]) + "</span></a>"; }).join("");
-    if (ws.length) html += '<div class="eyebrow">Words</div>' + ws.map(function (k) { return '<a class="res" href="#w-' + k + '"><span class="dot s' + sc(W.st[k]) + '"></span><span class="zh">' + esc(W.zh[k]) + '</span><span class="py">' + esc(W.py[k]) + '</span><span class="en">' + esc(W.en[k]) + "</span></a>"; }).join("");
+    findMore = {};
+    var f = find(text);
+    var html = findSection("Characters", f.hs.map(function (m) { return hRes(m, hLink(HG[m[0]])); }), 8) +
+      findSection("Components and groups", f.ps.map(function (m) { return pRes(m, cIdx[m[0]] != null ? "#c-" + cIdx[m[0]] : "#g-" + gIdx[m[0]]); }), 4) +
+      findSection("Words", f.ws.map(function (k) { return '<a class="res" href="#w-' + k + '"><span class="dot s' + sc(W.st[k]) + '"></span><span class="zh">' + esc(W.zh[k]) + '</span><span class="py">' + esc(W.py[k]) + '</span><span class="en">' + esc(W.en[k]) + "</span></a>"; }), 8);
     res.innerHTML = html || '<div class="res muted">Nothing found for “' + esc(text) + "”.</div>";
     res.hidden = false;
   }
@@ -956,7 +1031,9 @@ main.gmain { max-width: none; padding: 0; display: block; }
   document.addEventListener("click", function (e) {
     var t = e.target.closest ? e.target : e.target.parentNode;
     var mk = t.closest("[data-mark]"); if (mk) { toggleMark(mk.dataset.mark, mk.dataset.key); return; }
+    var fm = t.closest("[data-findmore]"); if (fm) { fm.insertAdjacentHTML("afterend", findMore[fm.dataset.findmore] || ""); fm.remove(); return; }
     if (!t.closest(".search")) res.hidden = true; else if (t.closest("a.res")) { res.hidden = true; }
+    var gres = $("gres"); if (gres && (!t.closest(".gfind") || t.closest("a.res"))) gres.hidden = true;
     var b = t.closest("[data-more]"); if (b) { var id = b.dataset.more; $(id).innerHTML = moreStore[id].map(wRow).join(""); b.remove(); return; }
     b = t.closest("[data-filter]"); if (b) { mapFilter = b.dataset.filter; mapPage(); return; }
     b = t.closest("[data-part]"); if (b) { openPart = +b.dataset.part; var y = window.scrollY; roadPage(); window.scrollTo(0, y); return; }
