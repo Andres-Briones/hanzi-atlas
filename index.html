@@ -175,6 +175,28 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
 .part.on { border-color: var(--ink); }
 .part b { font: 500 0.78rem/1 var(--mono); }
 .load { color: var(--ink-3); padding: 40px 0; text-align: center; }
+/* the graph view: one canvas as tall as the window, controls floating over it */
+main.gmain { max-width: none; padding: 0; display: block; }
+.gwrap { position: relative; height: 70vh; min-height: 340px; overflow: hidden; background: radial-gradient(120% 90% at 50% 42%, var(--card), var(--ground) 72%); }
+.gwrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; outline-offset: -3px; }
+.gwrap .load { position: absolute; inset: 40% 0 auto; }
+.gtop { position: absolute; top: 10px; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; pointer-events: none; }
+.gtop > * { pointer-events: auto; }
+.gtop input { width: min(260px, 100%); flex: 1 1 150px; max-width: 260px; padding: 7px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 0.9rem; }
+.gtop input.miss { border-color: var(--seal); }
+.gbtns { display: flex; gap: 6px; }
+.gcard { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 16px; width: min(300px, calc(100% - 32px)); max-height: calc(100% - 76px); overflow: auto; background: color-mix(in srgb, var(--card) 95%, transparent); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 8px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.12); }
+.gcard p { margin: 0; }
+.gc-h { display: flex; gap: 12px; align-items: center; }
+.gc-g { font: 500 2.6rem/1 var(--han); color: var(--seal); white-space: nowrap; }
+.gc-says { color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.gtip { position: absolute; z-index: 2; pointer-events: none; background: var(--ink); color: var(--ground); border-radius: 8px; padding: 5px 9px; font-size: 0.82rem; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gtip .py { color: inherit; opacity: 0.8; }
+.glegend { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 12px; max-width: min(560px, calc(100% - 32px)); display: flex; gap: 4px 14px; flex-wrap: wrap; justify-content: flex-end; font-size: 0.78rem; color: var(--ink-2); pointer-events: none; }
+.glegend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.glegend i.ln { width: 16px; height: 2px; border-radius: 1px; vertical-align: middle; }
+.glegend .ghint { flex-basis: 100%; text-align: right; color: var(--ink-3); }
+@media (max-width: 819px) { .gcard { right: max(16px, env(safe-area-inset-right, 0px)); width: auto; padding: 10px 12px; gap: 5px; } .gc-says, .gc-count { display: none; } .gc-g { font-size: 2rem; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -185,7 +207,7 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
     <div class="results" id="results" hidden></div>
   </div>
   <nav id="nav">
-    <a href="#home" data-v="home">Today</a><a href="#map" data-v="map">Map</a><a href="#road" data-v="road">Road</a><a href="#parts" data-v="parts">Components</a>
+    <a href="#home" data-v="home">Today</a><a href="#map" data-v="map">Map</a><a href="#graph" data-v="graph">Graph</a><a href="#road" data-v="road">Road</a><a href="#parts" data-v="parts">Components</a>
   </nav>
 </div></div>
 <main id="view"><p class="load">Loading the atlas…</p></main>
@@ -365,7 +387,7 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
       moreStore.hw = ws;
       var words = '<section class="card"><h2>Words with ' + esc(g) + "</h2>" + (ws.length ? listMore("hw", ws, wRow, 8) : '<p class="muted">No word in your dictionary uses it yet.</p>') + "</section>";
       view.innerHTML = '<div class="cols"><div class="stick stack"><div class="tian" id="tian"></div><div class="tools">' +
-        (r.m ? '<button class="btn" id="play">Write it</button>' : "") + sayBtnBig(g) + markBtn("h", g) + "</div></div>" +
+        (r.m ? '<button class="btn" id="play">Write it</button>' : "") + sayBtnBig(g) + (H.lv[i] ? '<a class="btn" href="#graph-h-' + hex(g) + '">See it in the graph</a>' : "") + markBtn("h", g) + "</div></div>" +
         '<div class="stack"><div class="head"><div class="eyebrow">Hanzi · frequency rank ' + H.rank[i] + (r.p ? " · " + r.p.length + " strokes" : "") + '</div><div class="readings"><h1 class="han">' + esc(g) + "</h1>" +
         (r.py && r.py.length ? r.py : [H.py[i]]).map(function (p) { return '<span class="py">' + esc(p) + "</span>"; }).join("") + pill(st) + (r.trad ? '<span class="pill">traditional <span class="han">' + esc(r.trad) + "</span></span>" : "") +
         '</div><p style="margin:0;max-width:65ch">' + esc(r.def || H.gl[i]) + "</p></div>" + tree + origin + fam + words + "</div></div>";
@@ -446,7 +468,8 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
       '<div class="tiles"><a class="tile" href="#map"><span class="eyebrow">Characters</span><span class="n">' + nk.length + '</span><span class="small muted">marked of ' + HG.length + ' · see the map →</span></a>' +
       '<div class="tile"><span class="eyebrow">Words</span><span class="n">' + wk + '</span><span class="small muted">marked of ' + W.zh.length + '</span></div>' +
       '<a class="tile" href="#parts"><span class="eyebrow">Components</span><span class="n">' + C.length + '</span><span class="small muted">atomic pieces build every character →</span></a>' +
-      '<a class="tile" href="' + hLink(pick) + '"><span class="eyebrow">Surprise me</span><span class="n han">' + esc(pick) + '</span><span class="small muted">open a common character →</span></a></div></div>' +
+      '<a class="tile" href="' + hLink(pick) + '"><span class="eyebrow">Surprise me</span><span class="n han">' + esc(pick) + '</span><span class="small muted">open a common character →</span></a>' +
+      '<a class="tile" href="#graph"><span class="eyebrow">Graph</span><span class="n han">字 ← 子</span><span class="small muted">every character, group and piece, connected →</span></a></div></div>' +
       '<div class="two"><section class="card"><h2>The 60 most common characters</h2><div class="chips">' + HG.slice(0, 60).map(function (g) { return hzCell(g); }).join("") + "</div></section>" +
       '<section class="card"><h2>Words by HSK 3.0 level</h2><div class="hsk">' + hsk + "</div>" + legend() + "</section></div>" +
       '<section class="about"><h2 style="color:var(--ink)">Sources</h2><p>Stroke outlines, stroke order and short etymology hints: <a href="https://github.com/skishore/makemeahanzi">Make Me a Hanzi</a> (derived from Arphic fonts, Arphic Public License). Word meanings: <a href="https://cc-cedict.org/">CC-CEDICT</a> (CC BY-SA 4.0) and the HSK 3.0 word lists. Example sentences: <a href="https://tatoeba.org/">Tatoeba</a> (CC BY 2.0 FR), sentences written for this site, and short lines quoted from freely watchable videos, each shown with its source: the <a href="https://www.youtube.com/playlist?list=PLzViq8fRe0iNrA1s1OOZMK6l8iyzIIJzN">Guided Mandarin</a> audio course, <a href="https://www.youtube.com/watch?v=U4h59nMjb0A">Zhangkai Chinese</a> and the drama Pursuit of Jade (逐玉, iQIYI). They remain the work of their authors; ask and they are removed. Components follow the Chinese national standard GF 0014-2009; the decomposition trees were built for this site from that standard, the stroke data and the CHISE / cjkvi IDS data. Origin notes, classes and pet names were written with AI assistance from the glyph-origin sections of <a href="https://en.wiktionary.org/">English Wiktionary</a> (CC BY-SA 4.0), the <a href="https://www.dong-chinese.com/">Dong Chinese</a> character data (CC BY-SA 4.0) and Make Me a Hanzi; each note states its sources and its confidence, and the notes are shared under CC BY-SA 4.0. Treat them as a starting point.</p></section>';
@@ -488,6 +511,420 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
       (parts.length ? '<section class="card"><h2>Guided Mandarin, part by part</h2><div class="parts">' + strip + "</div>" + legend() + (p ? '<h3 style="font-size:0.95rem">' + esc(p.name) + '</h3><div class="rows">' + (p.words || []).map(wRow).join("") + "</div>" : "") + "</section>" : "") +
       '<div class="two"><section class="card"><h2>In your deck, in the order you will meet them</h2>' + (queue.length ? listMore("rq", queue, wRow, 20) : '<p class="muted">Nothing queued.</p>') + "</section>" +
       '<section class="card"><h2>After that</h2><p class="small muted" style="margin:0">HSK 3.0 levels 1 to 3 first, then by how common the word is.</p>' + (next.length ? listMore("rn", next, wRow, 20) : '<p class="muted">Not computed.</p>') + "</section></div>";
+  }
+
+  // ---------------------------------------------------------------- graph
+  // One canvas. Every node has a home in the precomputed picture of the whole graph (data/graph.json).
+  // Opening a node lifts it and its neighbours out of that picture into a small tidy drawing at the
+  // node's home: what it is built from below, what it is built into above. Zooming out sends them home.
+  var GD = null, GV = null;
+  function graphData() {
+    return get("data/graph.json").then(function (d) {
+      if (GD) return GD;
+      var hs = Array.from(d.h), key = hs.concat(d.o), n = key.length, i, j;
+      var g = { n: n, key: key, x: d.x, y: d.y, u: d.u, kids: [], pars: [], role: [], vs: [], idx: {}, kind: [], imp: [], kmin: new Float32Array(n), E: [[], [], [], [], [], []] };
+      for (i = 0; i < n; i++) { g.kids.push([]); g.pars.push([]); g.role.push([]); g.vs.push([]); g.idx[key[i]] = i; g.kind.push(i < hs.length ? 0 : d.og[i - hs.length] ? 1 : 2); }
+      var seen = {};
+      for (i = 0; i < d.ep.length; i++) {
+        var p = d.ep[i], c = d.ec[i];
+        g.kids[p].push(c); g.role[p].push(d.er[i] & 3);
+        if (!seen[p + "," + c]) { seen[p + "," + c] = 1; g.pars[c].push(p); g.E[(d.er[i] & 3) + (d.er[i] & 4 ? 3 : 0)].push(p, c); }
+      }
+      for (i = 0; i < d.v.length; i += 2) { g.vs[d.v[i]].push(d.v[i + 1]); g.vs[d.v[i + 1]].push(d.v[i]); }
+      Object.keys(d.shapes || {}).forEach(function (k) { if (!SH[k]) SH[k] = d.shapes[k]; });
+      for (i = 0; i < n; i++) { var hi = hIdx[key[i]]; g.imp.push(g.u[i] * 3 + (hi != null ? Math.max(0, 70 - H.rank[hi] / 40) : 0)); }
+      // the zoom from which a node shows its character: when no more important node is within a label's width
+      var order = g.imp.map(function (_, k) { return k; }).sort(function (a, b) { return g.imp[b] - g.imp[a]; });
+      for (i = 0; i < n; i++) {
+        var a = order[i], best = Infinity, ax = g.x[a], ay = g.y[a];
+        for (j = 0; j < i; j++) { var b = order[j], dx = g.x[b] - ax, dy = g.y[b] - ay, dd = dx * dx + dy * dy; if (dd < best) best = dd; }
+        g.kmin[a] = i ? 36 / Math.sqrt(best) : 0;
+      }
+      var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (i = 0; i < n; i++) { x0 = Math.min(x0, g.x[i]); x1 = Math.max(x1, g.x[i]); y0 = Math.min(y0, g.y[i]); y1 = Math.max(y1, g.y[i]); }
+      g.box = [x0, y0, x1, y1];
+      return (GD = g);
+    });
+  }
+  function gTok(g, i) { var k = g.key[i]; return hIdx[k] != null ? "h-" + hex(k) : cIdx[k] != null ? "c-" + cIdx[k] : gIdx[k] != null ? "g-" + gIdx[k] : null; }
+  function gFromTok(g, tok) {
+    var m = /^([hcg])-([0-9a-f]+)$/.exec(tok || ""); if (!m) return -1;
+    var k = m[1] === "h" ? fromHex(m[2]) : m[1] === "c" ? (C[+m[2]] || {}).f : (CORE.gk || [])[+m[2]];
+    return k != null && g.idx[k] != null ? g.idx[k] : -1;
+  }
+  function gName(g, i) { var k = g.key[i], hi = hIdx[k]; return hi != null ? (H.nm && H.nm[hi]) || H.gl[hi] : cIdx[k] != null ? C[cIdx[k]].label : gIdx[k] != null ? CORE.gn[gIdx[k]] : ""; }
+  function gPy(g, i) { var hi = hIdx[g.key[i]]; return hi != null ? H.py[hi] : ""; }
+  function gHref(g, i) { var k = g.key[i]; return hIdx[k] != null ? hLink(k) : cIdx[k] != null ? "#c-" + cIdx[k] : gIdx[k] != null ? "#g-" + gIdx[k] : null; }
+  function gKindText(g, i) {
+    var k = g.key[i], hi = hIdx[k];
+    if (hi != null) return "Character · rank " + H.rank[hi] + (g.kids[i].length ? "" : " · one piece");
+    return g.kind[i] === 2 ? "Atomic component" : k.charAt(0) === "·" ? "Group without a character" : "Rare character used as a component";
+  }
+  function graphPage(tok) {
+    if (GV) { GV.go(tok); return; }
+    view.classList.add("gmain");
+    view.innerHTML = '<div class="gwrap" id="gwrap"><canvas id="gcv" tabindex="0" aria-label="Graph of every character, group and atomic component. Use the Find box to open one."></canvas>' +
+      '<div class="gtop"><input id="gq" type="search" placeholder="Find in the graph: 好, hao, good" aria-label="Find in the graph" autocomplete="off">' +
+      '<span class="gbtns"><button class="btn" id="gzi" aria-label="Zoom in">+</button><button class="btn" id="gzo" aria-label="Zoom out">−</button><button class="btn" id="gall">Whole graph</button></span></div>' +
+      '<div class="gcard" id="gcard" hidden></div><div class="gtip" id="gtip" hidden></div>' +
+      '<div class="glegend" id="gleg"><span><i style="background:var(--ink-3)"></i>character</span><span><i style="background:var(--c3)"></i>group</span><span><i style="background:var(--seal)"></i>atomic component</span>' +
+      '<span><i class="ln" style="background:var(--c1)"></i>gives the sound</span><span><i class="ln" style="background:var(--c4)"></i>gives the meaning</span><span class="ghint">Scroll or pinch to zoom, drag to move, click a dot to open it.</span></div>' +
+      '<p class="load" id="gload">Drawing the graph…</p></div>';
+    graphData().then(function (g) {
+      var cv = $("gcv"); if (!cv || !cv.getContext || GV) return;
+      $("gload").hidden = true;
+      GV = graphView(g); GV.go(tok, true);
+    }).catch(fail);
+  }
+  function graphView(g) {
+    var wrap = $("gwrap"), cv = $("gcv"), ctx = cv.getContext("2d"), card = $("gcard"), tip = $("gtip"), leg = $("gleg"), gq = $("gq");
+    var n = g.n, Wd = 0, Ht = 0, cam = { x: 0, y: 0, k: 0.05 }, col = {}, hanFont = "sans-serif", bodyFont = "sans-serif", monoFont = "monospace";
+    var sx = new Float32Array(n), sy = new Float32Array(n), inEgo = new Uint8Array(n), cls = new Uint8Array(n), capFs = new Float32Array(n), rw = new Float32Array(n);
+    var focus = -1, lastTok, slots = [], links = [], leaving = [], egoT = 1, egoStart = 0, veilFrom = 0, veilTo = 0, egoFitK = 1;
+    var hover = -1, hoverSlot = null, raf = 0, camAnim = null, rec = null, paths = {}, fitK = 0.05;
+    var EK = 1.1, EGO_MS = 750, reduce = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+    var ROLE = ["ink3", "c4", "c1"], KIND = ["ink", "c3", "seal"];
+    for (var i0 = 0; i0 < n; i0++) { capFs[i0] = 15 + Math.min(15, Math.sqrt(g.u[i0]) * 1.1); rw[i0] = 9 + 2.3 * Math.sqrt(g.u[i0]); }
+
+    function colours() {
+      var cs = getComputedStyle(document.documentElement);
+      ["ink", "ink-2", "ink-3", "line", "card", "ground", "seal", "known", "learn", "queue", "c0", "c1", "c2", "c3", "c4", "c5"].forEach(function (k) { col[k.replace("-", "")] = cs.getPropertyValue("--" + k).trim() || "#888"; });
+      hanFont = cs.getPropertyValue("--han").trim() || hanFont; bodyFont = cs.getPropertyValue("--body").trim() || bodyFont; monoFont = cs.getPropertyValue("--mono").trim() || monoFont;
+      for (var i = 0; i < n; i++) { var hi = hIdx[g.key[i]], st = hi != null ? sc(H.st[hi]) : 0; cls[i] = st === 3 ? 3 : st === 2 ? 4 : g.kind[i] === 0 ? 0 : g.kind[i]; }
+    }
+    var CLS = ["ink3", "c3", "seal", "known", "learn"];
+    function resize() {
+      wrap.style.height = Math.max(340, window.innerHeight - wrap.getBoundingClientRect().top - window.scrollY * 0) + "px";
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      Wd = wrap.clientWidth; Ht = wrap.clientHeight;
+      cv.width = Math.round(Wd * dpr); cv.height = Math.round(Ht * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fitK = Math.min(Wd / ((g.box[2] - g.box[0]) * 1.05), (Ht - 40) / ((g.box[3] - g.box[1]) * 1.05));
+    }
+    function need() { if (!raf) raf = requestAnimationFrame(frame); }
+    function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+    function fly(x, y, k, ms, user) {
+      if (reduce || !ms) { cam.x = x; cam.y = y; cam.k = k; camAnim = null; need(); return; }
+      var dist = Math.hypot(x - cam.x, y - cam.y) * Math.sqrt(cam.k * k);
+      camAnim = { x0: cam.x, y0: cam.y, k0: cam.k, x1: x, y1: y, k1: k, t0: performance.now(), ms: ms, dip: Math.min(1.5, Math.log(1 + dist / Math.max(Wd, Ht)) * 0.7), user: user };
+      need();
+    }
+    function whole(ms) { fly((g.box[0] + g.box[2]) / 2, (g.box[1] + g.box[3]) / 2 - 10 / fitK, fitK, ms); }
+
+    // ---- the neighbourhood of one node, in screen pixels at zoom EK around the node's home
+    function egoLayout(f) {
+      var S = [], L = [], leafX = 0, SX = 98, DY = 126;
+      function slot(node, px, py, r, o) { var s = { n: node, px: px, py: py, r: r }; for (var k in o) s[k] = o[k]; S.push(s); return s; }
+      var c = slot(f, 0, 0, 46, { center: true });
+      function place(node, depth, colour, role, up) {
+        var kids = depth < 7 ? g.kids[node] : [], s = slot(node, 0, 152 + (depth - 1) * DY, depth === 1 ? 27 : 23, { colour: colour, role: role, tree: true });
+        if (!kids.length) { s.px = leafX; leafX += SX; }
+        else { var ks = kids.map(function (k, j) { return place(k, depth + 1, colour, g.role[node][j], s); }); s.px = (ks[0].px + ks[ks.length - 1].px) / 2; }
+        L.push({ a: up, b: s, colour: colour, tree: true });
+        return s;
+      }
+      var top = g.kids[f].map(function (k, j) { return place(k, 1, j % 6, g.role[f][j], c); });
+      if (top.length) { var shift = (top[0].px + top[top.length - 1].px) / 2; S.forEach(function (s) { if (s.tree) s.px -= shift; }); }
+      var P = g.pars[f].slice().sort(function (a, b) { return g.imp[b] - g.imp[a]; }), span = Math.PI, cell = 56, row = 0, at = 0;
+      while (at < P.length) {
+        var R = 168 + row * 64, m = Math.min(Math.floor(span * R / cell) + 1, P.length - at), arc = m > 1 ? Math.min(span, (m - 1) * cell / R) : 0;
+        for (var j = 0; j < m; j++) {
+          var th = Math.PI / 2 + arc / 2 - (m > 1 ? arc * j / (m - 1) : 0), p = P[at + j];
+          var s = slot(p, R * Math.cos(th), -R * Math.sin(th), 20, { par: true });
+          L.push({ a: s, b: c, role: g.role[p][g.kids[p].indexOf(f)], par: true });
+        }
+        at += m; row++;
+      }
+      g.vs[f].forEach(function (v, j) { var s = slot(v, -(128 + 76 * j), 72, 20, { variant: true }); L.push({ a: c, b: s, variant: true }); });
+      var bx = [Infinity, Infinity, -Infinity, -Infinity];
+      S.forEach(function (s) { bx[0] = Math.min(bx[0], s.px - s.r - 26); bx[2] = Math.max(bx[2], s.px + s.r + 26); bx[1] = Math.min(bx[1], s.py - s.r - 10); bx[3] = Math.max(bx[3], s.py + s.r + (s.center ? 10 : 38)); });
+      return { S: S, L: L, box: bx };
+    }
+    function slotPos(s, e) { return [s.fx + (s.tx - s.fx) * e, s.fy + (s.ty - s.fy) * e, s.fr + (s.r - s.fr) * e]; }
+    function retire(e) {  // the slots on screen become travellers back to their homes
+      leaving = slots.map(function (s) { var p = slotPos(s, e); return { n: s.n, fx: p[0], fy: p[1], fr: p[2], tx: g.x[s.n], ty: g.y[s.n], r: 2, colour: s.colour, center: false }; });
+      slots = []; links = [];
+    }
+    function setFocus(f, first) {
+      var e = ease(egoT), prev = {}, lay = egoLayout(f), u = 1 / EK, k;
+      slots.forEach(function (s) { if (!prev[s.n]) prev[s.n] = slotPos(s, e); });
+      var keep = {}; lay.S.forEach(function (s) { keep[s.n] = 1; });
+      var old = slots; slots = old.filter(function (s) { return !keep[s.n]; }); retire(e);
+      lay.S.forEach(function (s) {
+        var p = prev[s.n];
+        s.tx = g.x[f] + s.px * u; s.ty = g.y[f] + s.py * u;
+        s.fx = p ? p[0] : g.x[s.n]; s.fy = p ? p[1] : g.y[s.n]; s.fr = p ? p[2] : 3;
+      });
+      slots = lay.S; links = lay.L;
+      inEgo.fill(0); slots.forEach(function (s) { inEgo[s.n] = 1; }); leaving.forEach(function (s) { inEgo[s.n] = 1; });
+      veilFrom = focus >= 0 ? 1 : veilNow(); veilTo = 1; focus = f; rec = null; hover = -1; hoverSlot = null; tip.hidden = true;
+      egoT = reduce ? 1 : 0; egoStart = performance.now();
+      var wide = Wd >= 820, il = wide ? 330 : 12, it = 58, ib = wide ? 40 : 150, aw = Math.max(120, Wd - il - 12), ah = Math.max(120, Ht - it - ib);
+      var bw = lay.box[2] - lay.box[0], bh = lay.box[3] - lay.box[1];
+      egoFitK = EK * Math.min(aw / bw, ah / bh);
+      k = Math.max(Math.min(egoFitK, EK * 1.3), Math.min(EK * 0.5, EK * aw / 520));
+      var cx = (lay.box[0] + lay.box[2]) / 2, cy = (lay.box[1] + lay.box[3]) / 2;
+      if (k > egoFitK) { cx = Math.max(lay.box[0] + aw * EK / k / 2, Math.min(lay.box[2] - aw * EK / k / 2, 0)); cy = Math.max(lay.box[1] + ah * EK / k / 2, Math.min(lay.box[3] - ah * EK / k / 2, 40)); }
+      fly(g.x[f] + cx * u - (il + aw / 2 - Wd / 2) / k, g.y[f] + cy * u - (it + ah / 2 - Ht / 2) / k, k, first ? 1500 : 900);
+      showCard(f);
+      var hi = hIdx[g.key[f]];
+      if (hi != null) hChunk(hi).then(function (ch) { if (focus !== f) return; rec = ch[g.key[f]] || null; showCard(f); need(); }).catch(function () {});
+      else if (gIdx[g.key[f]] != null) get("data/groups.json").then(function (G) { if (focus === f) showCard(f, (G[gIdx[g.key[f]]] || {}).says); }).catch(function () {});
+      need();
+    }
+    function veilNow() { return veilFrom + (veilTo - veilFrom) * ease(egoT); }
+    function release() {
+      if (focus < 0) return;
+      var e = ease(egoT); veilFrom = veilNow(); veilTo = 0; retire(e);
+      focus = -1; rec = null; card.hidden = true; leg.hidden = false; hoverSlot = null; tip.hidden = true;
+      egoT = reduce ? 1 : 0; egoStart = performance.now(); need();
+    }
+    function showCard(f, says) {
+      var k = g.key[f], hi = hIdx[k], ci = cIdx[k], py = gPy(g, f), name = gName(g, f), href = gHref(g, f), leaves = 0;
+      (function count(x) { if (!g.kids[x].length) leaves++; else g.kids[x].forEach(count); })(f);
+      says = says || (rec && rec.origin && rec.origin.says) || (ci != null && C[ci].says) || "";
+      var title = k.charAt(0) === "·" ? k.slice(1).split("+").map(formText).join(" + ") : formText(k);
+      card.innerHTML = '<div class="gc-h"><span class="gc-g han">' + title + '</span><div><div class="eyebrow">' + esc(gKindText(g, f)) + "</div>" + (py ? '<div class="py">' + esc(py) + "</div>" : "") + "</div></div>" +
+        (name ? '<p class="petname" style="margin:0">' + esc(name) + "</p>" : "") + (hi != null && H.gl[hi] && H.gl[hi] !== name ? "<p>" + esc(H.gl[hi]) + "</p>" : "") +
+        '<p class="small muted gc-count">' + (g.kids[f].length ? "Built from " + leaves + " atomic pieces, drawn below. " : "One piece: nothing below it. ") +
+        (g.pars[f].length ? "Above: the " + g.pars[f].length + " it goes straight into" + (g.u[f] > g.pars[f].length ? ", of " + g.u[f] + " characters that hold it." : ".") : "Nothing is built with it.") + "</p>" +
+        (says ? '<p class="small gc-says">' + esc(says) + "</p>" : "") +
+        '<div class="tools" style="justify-content:flex-start">' + (href ? '<a class="btn" href="' + href + '">Open its page</a>' : "") + '<a class="btn" href="#graph">Whole graph</a></div>';
+      card.hidden = false; leg.hidden = Wd < 820;
+    }
+
+    // ---- drawing
+    function shapePaths(k) { var s = SH[k]; if (!s) return null; return paths[k] || (paths[k] = s.p.map(function (d) { return new Path2D(d); })); }
+    function glyph(i, x, y, size, colour) {
+      var k = g.key[i];
+      ctx.fillStyle = colour;
+      if (safe(k)) { ctx.font = "500 " + size.toFixed(1) + "px " + hanFont; ctx.fillText(k, x, y + size * 0.05); return; }
+      var ps = shapePaths(k);
+      if (!ps) { ctx.font = "500 " + (size * 0.5).toFixed(1) + "px " + hanFont; ctx.fillText(k.charAt(0) === "·" ? k.slice(1).split("+").filter(safe).join("") || "◌" : "◌", x, y); return; }
+      var b = SH[k].bb, side = Math.max(b[2] - b[0], b[3] - b[1], 260) + 150, s = size * 1.05 / side;
+      ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.translate(-(b[0] + b[2]) / 2, -(900 - (b[1] + b[3]) / 2)); ctx.transform(1, 0, 0, -1, 0, 900);
+      ps.forEach(function (p) { ctx.fill(p); }); ctx.restore();
+    }
+    function disc(x, y, r, stroke, lw) { ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fillStyle = col.card; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = stroke; ctx.stroke(); }
+    function nodeInk(i) { return cls[i] === 3 ? col.known : cls[i] === 4 ? col.learn : col[KIND[g.kind[i]]]; }
+    function bigGlyph(x, y, R) {
+      if (!rec || !rec.p) return false;
+      var ps = rec._p || (rec._p = rec.p.map(function (d) { return new Path2D(d); })), map = {}, S = R * 1.5, s = S / 1024;
+      if (rec.t && rec.t.kids) rec.t.kids.forEach(function (kd, j) { kd.strokes.forEach(function (q) { map[q] = "c" + (j % 6); }); });
+      ctx.save(); ctx.translate(x - S / 2, y - S / 2 - S * 0.02); ctx.scale(s, s); ctx.transform(1, 0, 0, -1, 0, 900);
+      ps.forEach(function (p, q) { ctx.fillStyle = col[map[q] || "ink"]; ctx.fill(p); }); ctx.restore();
+      return true;
+    }
+    function cut(s, m) { s = s || ""; return s.length > m ? s.slice(0, m - 1).replace(/\s+$/, "") + "…" : s; }
+
+    function frame(now) {
+      raf = 0;
+      var again = false, i, k, j;
+      if (camAnim) {
+        var t = Math.min(1, (now - camAnim.t0) / camAnim.ms), e = ease(t);
+        cam.k = Math.exp(Math.log(camAnim.k0) + (Math.log(camAnim.k1) - Math.log(camAnim.k0)) * e - camAnim.dip * Math.sin(Math.PI * e));
+        cam.x = camAnim.x0 + (camAnim.x1 - camAnim.x0) * e; cam.y = camAnim.y0 + (camAnim.y1 - camAnim.y0) * e;
+        if (t >= 1) { var wasUser = camAnim.user; camAnim = null; if (wasUser) leaveIfFar(); } else again = true;
+      }
+      if (egoT < 1) { egoT = Math.min(1, (now - egoStart) / EGO_MS); again = true; }
+      else if (leaving.length) { leaving.forEach(function (s) { inEgo[s.n] = 0; }); slots.forEach(function (s) { inEgo[s.n] = 1; }); leaving = []; }
+      k = cam.k;
+      var ox = Wd / 2 - cam.x * k, oy = Ht / 2 - cam.y * k, eE = ease(egoT), veil = veilNow();
+      ctx.clearRect(0, 0, Wd, Ht);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineCap = "round";
+      for (i = 0; i < n; i++) { sx[i] = g.x[i] * k + ox; sy[i] = g.y[i] * k + oy; }
+      // links of the whole graph
+      var zl = Math.min(1, k / 0.5);
+      for (j = 0; j < 6; j++) {  // 0-2 the long rays to shared parts, 3-5 the link to the main part
+        var E = g.E[j]; ctx.beginPath();
+        for (i = 0; i < E.length; i += 2) {
+          var a = E[i], b = E[i + 1], ax = sx[a], ay = sy[a], bx = sx[b], by = sy[b];
+          if ((ax < 0 && bx < 0) || (ax > Wd && bx > Wd) || (ay < 0 && by < 0) || (ay > Ht && by > Ht)) continue;
+          ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+        }
+        ctx.lineWidth = j < 3 ? 0.5 + zl * 0.6 : 0.9 + zl * 0.7;
+        ctx.globalAlpha = j < 3 ? 0.055 + zl * 0.25 : 0.5 + zl * 0.2; ctx.strokeStyle = col[ROLE[j % 3] === "ink3" && j > 2 ? "ink2" : ROLE[j % 3]]; ctx.stroke();
+      }
+      // nodes: a dot, or the character once there is room for it
+      var labels = [], batch = [[], [], [], [], []];
+      for (i = 0; i < n; i++) {
+        if (inEgo[i]) continue;
+        var x = sx[i], y = sy[i];
+        if (x < -40 || x > Wd + 40 || y < -40 || y > Ht + 40) continue;
+        var km = g.kmin[i], al = km ? (k / km - 1) / 0.22 : 1;
+        if (al > 0) labels.push(i);
+        if (al < 1) batch[cls[i]].push(i);
+      }
+      for (j = 0; j < 5; j++) {
+        ctx.beginPath();
+        batch[j].forEach(function (q) { var r = Math.max(j ? 1.5 : 1.15, Math.min(rw[q] * k, 9)); ctx.moveTo(sx[q] + r, sy[q]); ctx.arc(sx[q], sy[q], r, 0, 6.2832); });
+        ctx.globalAlpha = j ? 0.95 : 0.75; ctx.fillStyle = col[CLS[j]]; ctx.fill();
+      }
+      for (j = labels.length - 1; j >= 0; j--) {
+        i = labels[j];
+        var km2 = g.kmin[i], fs = Math.min(capFs[i] * (1 + Math.min(1.1, k * 1.3)), km2 ? 14 * Math.sqrt(k / km2) : 99), ink = nodeInk(i);
+        ctx.globalAlpha = km2 ? Math.min(1, (k / km2 - 1) / 0.22) : 1;
+        disc(sx[i], sy[i], fs * 0.8, g.kind[i] ? ink : col.line, g.kind[i] ? 1.4 : 1);
+        glyph(i, sx[i], sy[i], fs, ink);
+      }
+      ctx.globalAlpha = 1;
+      // the opened neighbourhood, over a veil
+      if (veil > 0.003) { ctx.globalAlpha = 0.86 * veil; ctx.fillStyle = col.ground; ctx.fillRect(0, 0, Wd, Ht); ctx.globalAlpha = 1; }
+      var z = k / EK;
+      function scr(s) { var p = slotPos(s, eE); s.x = p[0] * k + ox; s.y = p[1] * k + oy; s.rr = Math.max(1.5, p[2] * z); }
+      leaving.forEach(function (s) { scr(s); ctx.globalAlpha = 1 - eE * 0.7; disc(s.x, s.y, s.rr, col.line, 1); if (s.rr > 7) glyph(s.n, s.x, s.y, s.rr * 1.15, nodeInk(s.n)); });
+      ctx.globalAlpha = 1;
+      if (slots.length) {
+        slots.forEach(scr);
+        links.forEach(function (l) {
+          var A = l.a, B = l.b;
+          ctx.beginPath();
+          if (l.tree) { var y0 = A.y + (A.tree ? A.rr + 33 * z : 0), my = (y0 + B.y) / 2; ctx.moveTo(A.x, y0); ctx.bezierCurveTo(A.x, my, B.x, my, B.x, B.y); ctx.strokeStyle = col["c" + l.colour]; ctx.lineWidth = Math.max(1, 2.4 * z); ctx.globalAlpha = 0.85; }
+          else if (l.par) { ctx.moveTo(A.x, A.y); ctx.quadraticCurveTo(A.x * 0.35 + B.x * 0.65, A.y * 0.75 + B.y * 0.25, B.x, B.y); ctx.strokeStyle = col[ROLE[l.role || 0]]; ctx.lineWidth = Math.max(0.7, (l.role ? 1.7 : 1.1) * z); ctx.globalAlpha = l.role ? 0.7 : 0.4; }
+          else { ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.setLineDash([4 * z, 5 * z]); ctx.strokeStyle = col.ink3; ctx.lineWidth = Math.max(0.8, 1.3 * z); ctx.globalAlpha = 0.8; }
+          ctx.stroke(); ctx.setLineDash([]);
+        });
+        ctx.globalAlpha = 1;
+        var capOn = 11 * z >= 7.2;
+        for (j = slots.length - 1; j >= 0; j--) {
+          var s = slots[j], hot = hoverSlot === s, ink2 = nodeInk(s.n);
+          if (s.x < -80 || s.x > Wd + 80 || s.y < -80 || s.y > Ht + 80) continue;
+          if (s.center) { ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.22)"; ctx.shadowBlur = 22 * z; ctx.shadowOffsetY = 4 * z; disc(s.x, s.y, s.rr, col.seal, Math.max(1.5, 2.6 * z)); ctx.restore(); if (!bigGlyph(s.x, s.y, s.rr)) glyph(s.n, s.x, s.y, s.rr * 1.2, col.ink); continue; }
+          disc(s.x, s.y, s.rr * (hot ? 1.12 : 1), s.tree ? col["c" + s.colour] : hot ? col.ink : g.kind[s.n] ? ink2 : col.ink3, Math.max(1, (s.tree ? 2.4 : 1.3) * z));
+          if (s.rr > 5) glyph(s.n, s.x, s.y, s.rr * 1.15, s.tree ? col.ink : ink2);
+          if (!capOn || eE < 0.6) continue;
+          ctx.globalAlpha = (eE - 0.6) / 0.4;
+          var py = gPy(g, s.n), yy = s.y + s.rr + 9 * z;
+          ctx.strokeStyle = col.ground; ctx.lineWidth = 3 * z; ctx.lineJoin = "round";
+          if (s.tree) {
+            var nm = cut(gName(g, s.n), 17);
+            if (nm) { ctx.font = "500 " + (11.5 * z).toFixed(1) + "px " + bodyFont; ctx.fillStyle = col.ink; ctx.strokeText(nm, s.x, yy); ctx.fillText(nm, s.x, yy); yy += 13.5 * z; }
+            var sub = [py, s.role === 2 ? "sound" : s.role === 1 ? "meaning" : ""].filter(Boolean).join(" · ");
+            if (sub) { ctx.font = (10.5 * z).toFixed(1) + "px " + monoFont; ctx.fillStyle = col.ink2; ctx.strokeText(sub, s.x, yy); ctx.fillText(sub, s.x, yy); }
+          } else if (s.variant) { ctx.font = (10 * z).toFixed(1) + "px " + bodyFont; ctx.fillStyle = col.ink2; ctx.strokeText("same piece", s.x, yy); ctx.fillText("same piece", s.x, yy); }
+          else if (py) { ctx.font = (10 * z).toFixed(1) + "px " + monoFont; ctx.fillStyle = col.ink2; ctx.strokeText(py, s.x, yy); ctx.fillText(py, s.x, yy); }
+          ctx.globalAlpha = 1;
+        }
+      }
+      // pointing at a node of the whole graph: its links and neighbours stand out
+      if (focus < 0 && hover >= 0 && !inEgo[hover]) {
+        var h = hover, near = g.pars[h].concat(g.kids[h]);
+        ctx.globalAlpha = 0.6; ctx.fillStyle = col.ground; ctx.fillRect(0, 0, Wd, Ht);
+        ctx.lineWidth = 1.3;
+        g.pars[h].forEach(function (p) { ctx.beginPath(); ctx.moveTo(sx[p], sy[p]); ctx.lineTo(sx[h], sy[h]); ctx.globalAlpha = 0.75; ctx.strokeStyle = col[ROLE[g.role[p][g.kids[p].indexOf(h)] || 0]]; ctx.stroke(); });
+        g.kids[h].forEach(function (c, q) { ctx.beginPath(); ctx.moveTo(sx[c], sy[c]); ctx.lineTo(sx[h], sy[h]); ctx.globalAlpha = 0.9; ctx.lineWidth = 2; ctx.strokeStyle = col[ROLE[g.role[h][q]] === col.ink3 ? "ink2" : ROLE[g.role[h][q]]]; ctx.stroke(); });
+        ctx.globalAlpha = 1;
+        var small = near.length > 70;
+        near.forEach(function (q) { if (small) { ctx.beginPath(); ctx.arc(sx[q], sy[q], 3, 0, 6.2832); ctx.fillStyle = nodeInk(q); ctx.fill(); } else { disc(sx[q], sy[q], 11, g.kind[q] ? nodeInk(q) : col.ink3, 1.2); glyph(q, sx[q], sy[q], 14, nodeInk(q)); } });
+        disc(sx[h], sy[h], 19, col.seal, 2.2); glyph(h, sx[h], sy[h], 24, col.ink);
+      }
+      if (again) need();
+    }
+
+    // ---- pointer, wheel, keys
+    function leaveIfFar() { if (focus >= 0 && cam.k < egoFitK * 0.42) { release(); lastTok = null; try { history.replaceState(null, "", "#graph"); } catch (e) {} } }
+    function zoomAt(px, py, f) {
+      var k0 = cam.k, k1 = Math.max(fitK * 0.7, Math.min(2, k0 * f)), wx = (px - Wd / 2) / k0 + cam.x, wy = (py - Ht / 2) / k0 + cam.y;
+      camAnim = null; cam.k = k1; cam.x = wx - (px - Wd / 2) / k1; cam.y = wy - (py - Ht / 2) / k1;
+      leaveIfFar(); need();
+    }
+    function pick(px, py) {
+      var i, best = -1, bd = Infinity;
+      if (focus >= 0 || slots.length) {
+        for (i = 0; i < slots.length; i++) { var s = slots[i], d = Math.hypot(s.x - px, s.y - py); if (d < Math.max(s.rr, 9) + 4 && d < bd) { bd = d; best = i; } }
+        return best >= 0 ? { slot: slots[best], n: slots[best].n } : null;
+      }
+      for (i = 0; i < n; i++) { var dx = sx[i] - px, dy = sy[i] - py, dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; best = i; } }
+      return best >= 0 && Math.sqrt(bd) < Math.max(13, Math.min(rw[best] * cam.k, 9) + 7) ? { n: best } : null;
+    }
+    function open(i) { var t = gTok(g, i); if (t && i !== focus) location.hash = "#graph-" + t; }
+    function showTip(hit, px, py) {
+      if (!hit) { tip.hidden = true; return; }
+      var i = hit.n, py2 = gPy(g, i), nm = gName(g, i);
+      tip.innerHTML = '<b class="han">' + (g.key[i].charAt(0) === "·" ? g.key[i].slice(1).split("+").map(formText).join(" + ") : formText(g.key[i])) + "</b> " + (py2 ? '<span class="py">' + esc(py2) + "</span> " : "") + esc(nm || gKindText(g, i)) + (g.u[i] ? ' <span class="py">· in ' + g.u[i] + "</span>" : "");
+      tip.hidden = false; tip.style.left = Math.max(8, Math.min(px + 14, Wd - tip.offsetWidth - 8)) + "px"; tip.style.top = (py + 18 + tip.offsetHeight > Ht ? py - tip.offsetHeight - 10 : py + 18) + "px";
+    }
+    var ptrs = {}, drag = null, pinch = null;
+    function pos(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    cv.addEventListener("pointerdown", function (e) {
+      var p = pos(e); ptrs[e.pointerId] = p; try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+      var ids = Object.keys(ptrs);
+      if (ids.length === 1) drag = { x: p[0], y: p[1], cx: cam.x, cy: cam.y, moved: false };
+      else if (ids.length === 2) { var a = ptrs[ids[0]], b = ptrs[ids[1]]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1 }; drag = null; }
+      tip.hidden = true;
+    });
+    cv.addEventListener("pointermove", function (e) {
+      var p = pos(e);
+      if (ptrs[e.pointerId]) {
+        ptrs[e.pointerId] = p;
+        var ids = Object.keys(ptrs);
+        if (pinch && ids.length === 2) { var a = ptrs[ids[0]], b = ptrs[ids[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, d / pinch.d); pinch.d = d; return; }
+        if (drag) {
+          var dx = p[0] - drag.x, dy = p[1] - drag.y;
+          if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+          drag.moved = true; camAnim = null; cam.x = drag.cx - dx / cam.k; cam.y = drag.cy - dy / cam.k; cv.style.cursor = "grabbing"; need();
+        }
+        return;
+      }
+      if (e.pointerType !== "mouse") return;
+      var hit = pick(p[0], p[1]), h = hit && !hit.slot ? hit.n : -1, hs = hit && hit.slot || null;
+      cv.style.cursor = hit && !(hs && hs.center) ? "pointer" : "grab";
+      if (h !== hover || hs !== hoverSlot) { hover = h; hoverSlot = hs; need(); }
+      showTip(hit, p[0], p[1]);
+    });
+    function up(e) {
+      var had = ptrs[e.pointerId]; delete ptrs[e.pointerId];
+      if (Object.keys(ptrs).length < 2) pinch = null;
+      if (had && drag && !drag.moved && e.type === "pointerup") { var hit = pick(drag.x, drag.y); if (hit) open(hit.n); }
+      if (!Object.keys(ptrs).length) { drag = null; cv.style.cursor = "grab"; }
+    }
+    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+    cv.addEventListener("pointerleave", function () { if (hover >= 0 || hoverSlot) { hover = -1; hoverSlot = null; need(); } tip.hidden = true; });
+    cv.addEventListener("wheel", function (e) { e.preventDefault(); var p = pos(e), dy = e.deltaY * (e.deltaMode === 1 ? 16 : 1); zoomAt(p[0], p[1], Math.exp(-dy * (e.ctrlKey ? 0.012 : 0.0016))); tip.hidden = true; }, { passive: false });
+    function step(f) { var k = Math.max(fitK * 0.7, Math.min(2, cam.k * f)); fly(cam.x, cam.y, k, 260, true); }
+    cv.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") location.hash = "#graph"; else if (e.key === "+" || e.key === "=") step(1.6); else if (e.key === "-") step(1 / 1.6);
+      else if (e.key.indexOf("Arrow") === 0) { var d = 80 / cam.k; cam.x += e.key === "ArrowLeft" ? -d : e.key === "ArrowRight" ? d : 0; cam.y += e.key === "ArrowUp" ? -d : e.key === "ArrowDown" ? d : 0; camAnim = null; need(); e.preventDefault(); }
+    });
+    $("gzi").onclick = function () { step(1.6); }; $("gzo").onclick = function () { step(1 / 1.6); };
+    $("gall").onclick = function () { if (location.hash === "#graph") { release(); whole(700); } else location.hash = "#graph"; };
+    gq.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      var text = gq.value.trim(), found = -1, p = plain(text), low = text.toLowerCase(), i;
+      Array.from(text).some(function (ch) { if (g.idx[ch] != null) { found = g.idx[ch]; return true; } return false; });
+      if (found < 0 && p) for (i = 0; i < HG.length && found < 0; i++) if (plain(H.py[i]) === p && g.idx[HG[i]] != null) found = g.idx[HG[i]];
+      if (found < 0 && low.length > 1) {
+        var re = new RegExp("(^|[^a-z])" + low.replace(/[^a-z0-9 ]/g, ""), "i");
+        for (i = 0; i < HG.length && found < 0; i++) if (g.idx[HG[i]] != null && ((H.nm && H.nm[i] === low) || H.gl[i].toLowerCase() === low)) found = g.idx[HG[i]];
+        for (i = 0; i < HG.length && found < 0; i++) if (g.idx[HG[i]] != null && (re.test(H.gl[i]) || (H.nm && re.test(H.nm[i])))) found = g.idx[HG[i]];
+        for (i = 0; i < n && found < 0; i++) if (hIdx[g.key[i]] == null && re.test(gName(g, i))) found = i;
+      }
+      gq.classList.toggle("miss", found < 0);
+      if (found >= 0) { open(found); gq.blur(); }
+    });
+    function onResize() { if (!$("gcv")) return; resize(); need(); }
+    function onTheme() { colours(); need(); }
+    window.addEventListener("resize", onResize);
+    var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null, mo = null;
+    if (mq && mq.addEventListener) mq.addEventListener("change", onTheme);
+    if (window.MutationObserver) { mo = new MutationObserver(onTheme); mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(need);
+
+    return {
+      go: function (tok, first) {
+        if (first) { colours(); resize(); cam.x = (g.box[0] + g.box[2]) / 2; cam.y = (g.box[1] + g.box[3]) / 2 - 10 / fitK; cam.k = fitK; need(); }
+        else if (tok === lastTok) { need(); return; }
+        lastTok = tok;
+        var i = tok ? gFromTok(g, tok) : -1;
+        if (i < 0) { release(); if (!first) whole(900); }
+        else if (i !== focus) setFocus(i, first);
+      },
+      stop: function () {
+        cancelAnimationFrame(raf); window.removeEventListener("resize", onResize);
+        if (mq && mq.removeEventListener) mq.removeEventListener("change", onTheme);
+        if (mo) mo.disconnect();
+      }
+    };
   }
 
   // ---------------------------------------------------------------- search
@@ -533,7 +970,10 @@ svg .pen { fill: none; stroke: var(--seal); stroke-width: 140; stroke-linecap: r
     var y0 = keep === true ? window.scrollY : 0;
     var h = (location.hash || "#home").slice(1), m, v = "home";
     clearTimeout(animTimer);
-    if ((m = /^h-([0-9a-f]+)$/.exec(h))) { hanziPage(fromHex(m[1])); v = ""; }
+    var isG = /^graph(-|$)/.test(h);
+    if (!isG) { if (GV) { GV.stop(); GV = null; } view.classList.remove("gmain"); }
+    if ((m = /^graph(?:-([hcg]-[0-9a-f]+))?$/.exec(h))) { graphPage(m[1] || null); v = "graph"; }
+    else if ((m = /^h-([0-9a-f]+)$/.exec(h))) { hanziPage(fromHex(m[1])); v = ""; }
     else if ((m = /^w-(\d+)$/.exec(h))) { wordPage(+m[1]); v = ""; }
     else if ((m = /^c-(\d+)$/.exec(h))) { compPage(+m[1]); v = "parts"; }
     else if ((m = /^g-(\d+)$/.exec(h))) { groupPage(+m[1]); v = "parts"; }
